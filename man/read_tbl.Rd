@@ -7,9 +7,9 @@
 read_tbl(file_path, col_names = NULL, n_skip = 1)
 }
 \arguments{
-\item{file_path}{Path of the SWAT+ input file}
+\item{file_path}{Path of the SWAT+ input file.}
 
-\item{col_names}{optional column names vector}
+\item{col_names}{optional column names vector.}
 
 \item{n_skip}{Number of header rows to skip. Default is 1.}
 }

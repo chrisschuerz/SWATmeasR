@@ -7,7 +7,7 @@
 read_con_file(file_path)
 }
 \arguments{
-\item{file_path}{Path of the SWAT+ input file}
+\item{file_path}{Path of the SWAT+ input file.}
 }
 \value{
 The connecitivity input file as a tibble

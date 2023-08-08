@@ -1,3 +1,12 @@
+#' Read SWAT+ input files and arrange them in a list object
+#'
+#' @param project_path Path to the SWAT project folder on the hard drive
+#'   (i.e. txtinout folder).
+#'
+#' @returns A list object with the SWAT+ input files organized in tibbles.
+#'
+#' @export
+#'
 read_swat_inputs <- function(project_path) {
   input_list <- list(
     object.cnt    = read_tbl(paste0(project_path, '/object.cnt')),
@@ -19,8 +28,8 @@ read_swat_inputs <- function(project_path) {
 
 #' Read SWAT+ input files which have a tabular structure
 #'
-#' @param file_path Path of the SWAT+ input file
-#' @param col_names optional column names vector
+#' @param file_path Path of the SWAT+ input file.
+#' @param col_names optional column names vector.
 #' @param n_skip Number of header rows to skip. Default is 1.
 #'
 #' @returns The SWAT+ input file as a tibble
@@ -30,8 +39,6 @@ read_swat_inputs <- function(project_path) {
 #' @importFrom tibble add_column tibble
 #'
 #' @export
-#'
-#' @examples
 #'
 read_tbl <- function(file_path, col_names = NULL, n_skip = 1) {
   if (file.exists(file_path)) {
@@ -75,7 +82,7 @@ read_tbl <- function(file_path, col_names = NULL, n_skip = 1) {
 
 #' Read a SWAT+ connecitivity (*.con) input file.
 #'
-#' @param file_path Path of the SWAT+ input file
+#' @param file_path Path of the SWAT+ input file.
 #'
 #' @returns The connecitivity input file as a tibble
 #'
@@ -88,7 +95,6 @@ read_tbl <- function(file_path, col_names = NULL, n_skip = 1) {
 #'
 #' @export
 #'
-#' @examples
 read_con_file <- function(file_path) {
   con_mtx <- fread(file_path, skip = 2, sep = NULL, sep2 = NULL, header = F) %>%
     unlist(.) %>%
@@ -112,6 +118,7 @@ read_con_file <- function(file_path) {
 
   con_tbl <- as_tibble(con_mtx, validate = NULL, .name_repair = 'minimal') %>%
     set_names(c(obj_names, con_names)) %>%
+    mutate(area = as.numeric(area)) %>%
     mutate(across(matches('id'), as.integer),
            across(starts_with('frac'), as.numeric))
 
