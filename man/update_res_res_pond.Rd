@@ -4,10 +4,12 @@
 \alias{update_res_res_pond}
 \title{Update the reservoir.res input table.}
 \usage{
-update_res_res_pond(res_res)
+update_res_res_pond(res_res, hru_id)
 }
 \arguments{
 \item{res_res}{reservoir.res input table}
+
+\item{hru_id}{ID of the HRU which is replaced by a pond.}
 }
 \value{
 Updated reservoir.res input table.

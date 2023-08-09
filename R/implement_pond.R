@@ -1,58 +1,136 @@
 #' Implement ponds by replacing land objects.
 #'
-#' `implement_ponds()` uses the `hru_to_pond` input table to implement ponds.
-#' The land objects defined by the `hru_id` in `hru_to_pond` are assigned an
-#' area of (almost) 0. The connection fractions for those land objects are
-#' set to 0. Reservoirs with the same area/lat/long/elev are generated (at the
-#' moment with default reservoir dimensions). All land objects which initially
-#' routed water to the land objects with `hru_id` now route water to the new
-#' reservoirs. The new reservoirs must route water to one channel each defined
-#' with `to_cha_id` in `hru_to_pond`. Optionally a `from_cha_id` can be defined
-#' if channels should be rerouted into the new reservoir.
+#' The land objects defined by the `hru_id` are assigned an area of (almost) 0.
+#' The connection fractions for those land objects are set to 0. Reservoirs with
+#' the same area/lat/long/elev are generated (at the moment with default
+#' reservoir dimensions) are implemented in the reservoir input files. All land
+#' objects which initially routed water to the land objects with `hru_id` now
+#' route water to the new reservoirs. The new reservoirs must route water to one
+#' channel each defined with `to_cha_id`. Optionally a `from_cha_id` can be
+#' defined if channels should be rerouted into the new reservoir.
 #'
 #' @param swat_inputs List with SWAT+ input files.
-#' @param hru_to_pond Tibble which defines the changes from land objects to pond
-#'   objects.
+#' @param hru_id HRU IDs which will be replaced by ponds.
+#'
+#'   The input can be a single numeric value to replace a single HRU, or a
+#'   vector of numeric values if multiple HRUs should be replaced by ponds.
+#'
+#' @param to_cha_id Channel IDs into which implemented ponds route water.
+#'
+#'   The input can be a single numeric value or a vector of values. `to_cha_id`
+#'   must be the same length as `hru_id`. Each channel ID corresponds to the
+#'   respective `hru_id`.
+#'
+#' @param from_cha_id (optional) channel IDs which send water to the implemented
+#'   ponds.
+#'
+#'   The input is default `NA`. Then the channel routing remains unchanged.
+#'   Multiple channels can be rerouted into a pond. If `hru_id` is a single
+#'   value `from_cha_id` can be a single numeric value to reroute one channel,
+#'   or a vector to reroute multiple channels into the implemented pond. If
+#'   `hru_id` is a vector, `from_cha_id` must be a list with the same length, as
+#'   `hru_id`. If for a respective `hru_id` no channels should be rerouted that
+#'   list element is `NA`, otherwise the list element can be a value or a
+#'   vector.
 #'
 #' @returns The `swat_inputs` list with updated input tables which include all
 #'   necessary changes to replace land objects by ponds.
 #'
 #' @export
 #'
-implement_ponds <- function(swat_inputs, hru_to_pond) {
-  rtu_con_chg <- get_chg_ids_pond(swat_inputs$rout_unit.con, hru_to_pond$hru_id)
+implement_ponds <- function(swat_inputs, hru_id, to_cha_id, from_cha_id = NULL) {
+  is_pond <- check_arguments_pond(swat_inputs, hru_id, to_cha_id, from_cha_id)
+  hru_id    <- hru_id[!is_pond]
+  to_cha_id <- to_cha_id[!is_pond]
+  if(is.list(from_cha_id)) {
+    from_cha_id   <- from_cha_id[!is_pond]
+  }
+  if(length(hru_id) > 0) {
+    rtu_con_chg <- get_chg_ids_pond(swat_inputs$rout_unit.con, hru_id)
 
-  for (i in 1:nrow(hru_to_pond)) {
-    hru_i <- hru_to_pond$hru_id[i]
-    to_cha_i <- hru_to_pond$to_cha_id[i]
-    from_cha_i <- unlist(hru_to_pond$from_cha_id[i])
-    area_i <- swat_inputs$rout_unit.con[swat_inputs$rout_unit.con$id == hru_i,]$area
+    for (i in 1:length(hru_id)) {
+      hru_i <- hru_id[i]
+      to_cha_i <- to_cha_id[i]
+      from_cha_i <- unlist(from_cha_id[i])
+      area_i <-
+        swat_inputs$rout_unit.con[swat_inputs$rout_unit.con$id == hru_i,]$area
 
-    swat_inputs$object.cnt <- update_obj_cnt_pond(swat_inputs$object.cnt)
+      swat_inputs$object.cnt <- update_obj_cnt_pond(swat_inputs$object.cnt)
 
-    swat_inputs$reservoir.res <- update_res_res_pond(swat_inputs$reservoir.res)
-    res_id <- swat_inputs$reservoir.res$id[nrow(swat_inputs$reservoir.res)]
-    swat_inputs$reservoir.con <- update_res_con_pond(swat_inputs$reservoir.con,
-                                                     swat_inputs$rout_unit.con,
-                                                     hru_i,
-                                                     to_cha_i,
+      swat_inputs$reservoir.res <- update_res_res_pond(swat_inputs$reservoir.res,
+                                                       hru_i)
+      res_id <- swat_inputs$reservoir.res$id[nrow(swat_inputs$reservoir.res)]
+      swat_inputs$reservoir.con <- update_res_con_pond(swat_inputs$reservoir.con,
+                                                       swat_inputs$rout_unit.con,
+                                                       hru_i,
+                                                       to_cha_i,
+                                                       res_id)
+      swat_inputs$hydrology.res <- update_hyd_res_pond(swat_inputs$hydrology.res,
+                                                       hru_i,
+                                                       area_i)
+
+      swat_inputs$rout_unit.con <- update_rtu_con_pond(swat_inputs$rout_unit.con,
+                                                       rtu_con_chg,
+                                                       hru_i,
+                                                       res_id)
+      swat_inputs$hru.con <- update_hru_con_pond(swat_inputs$hru.con, hru_i)
+
+      swat_inputs$chandeg.con <- update_cha_con_pond(swat_inputs$chandeg.con,
+                                                     from_cha_i,
                                                      res_id)
-    swat_inputs$hydrology.res <- update_hyd_res_pond(swat_inputs$hydrology.res,
-                                                     res_id,
-                                                     area_i)
-
-    swat_inputs$rout_unit.con <- update_rtu_con_pond(swat_inputs$rout_unit.con,
-                                                     rtu_con_chg,
-                                                     hru_i,
-                                                     res_id)
-    swat_inputs$hru.con <- update_hru_con_pond(swat_inputs$hru.con, hru_i)
-
-    swat_inputs$chandeg.con <- update_cha_con_pond(swat_inputs$rout_unit.con,
-                                                   from_cha_i,
-                                                   res_id)
+    }
   }
 
   return(swat_inputs)
+}
+
+#' Check the function input arguments.
+#'
+#' Lengths and data types are checked. Routine checks if HRUs were already
+#' replaced by ponds, triggers a warning if yes and removes the HRUs from the
+#' replacement set.
+#'
+#' @param swat_inputs List with SWAT+ input files.
+#' @param hru_id HRU IDs which will be replaced by ponds.
+#' @param to_cha_id Channel IDs into which implemented ponds route water.
+#' @param from_cha_id (optional) channel IDs which send water to the implemented
+#'   ponds.
+#'
+#' @returns A boolean vector to indicate which HRUs are already replaced by
+#'   ponds.
+#'
+#' @keywords internal
+#'
+check_arguments_pond <- function(swat_inputs, hru_id, to_cha_id, from_cha_id) {
+  stopifnot(is.numeric(hru_id))
+  stopifnot(is.numeric(to_cha_id))
+  stopifnot(length(hru_id) == length(to_cha_id))
+
+  if(!is.null(from_cha_id)) {
+    if(length(hru_id) == 1) {
+      if(is.list(from_cha_id) & length(from_cha_id) != 1) {
+        stop("If a single HRUs should be replaced by a pond, then 'from_cha_id' ",
+             "must be either a vector or a list with length = 1.")
+      }
+    } else if (length(hru_id) > 1 & !is.list(from_cha_id)){
+      stop("If multiple HRUs should be replaced by ponds, then 'from_cha_id' ",
+           "must be of type 'list'.")
+    } else if (length(hru_id) != length(to_cha_id)) {
+      stop("If multiple HRUs should be replaced by ponds, then the list ",
+           "'from_cha_id' must have the same length as 'hru_id'.")
+    }
+  }
+
+  res_names <- swat_inputs$reservoir.res$name
+  pnd_ids <- as.integer(gsub('pnd', '', res_names[grepl('pnd[:0-9:]+',
+                                                        res_names)]))
+  is_pond <- hru_id %in% pnd_ids
+  if (any(is_pond)) {
+    warning('The HRUs with the IDs ', paste(hru_id[is_pond], collapse = ', '),
+            ' were already replaced by ponds and are skipped.')
+  }
+
+  return(is_pond)
 }
 
 #' Get the IDs of the units for which the connectivities must be changed.
@@ -199,7 +277,7 @@ update_res_con_pond <- function(res_con, rtu_con, hru_id, to_cha_id, res_id) {
     filter(., id == hru_id) %>%
     select(., id:out_tot) %>%
     mutate(id = res_id,
-           name = paste0('res', id),
+           name = paste0('pnd', hru_id),
            obj_id = id,
            out_tot = '1',
            obj_typ_1 = 'sdc',
@@ -220,6 +298,7 @@ update_res_con_pond <- function(res_con, rtu_con, hru_id, to_cha_id, res_id) {
 #' reservoirs).
 #'
 #' @param res_res reservoir.res input table
+#' @param hru_id  ID of the HRU which is replaced by a pond.
 #'
 #' @returns Updated reservoir.res input table.
 #'
@@ -227,10 +306,10 @@ update_res_con_pond <- function(res_con, rtu_con, hru_id, to_cha_id, res_id) {
 #'
 #' @keywords internal
 #'
-update_res_res_pond <- function(res_res) {
+update_res_res_pond <- function(res_res, hru_id) {
   res_add <- res_res[nrow(res_res), ] %>%
     mutate(id = id + 1,
-           name = paste0('res', id),
+           name = paste0('pnd', hru_id),
            hyd  = name)
   res_res <- bind_rows(res_res, res_add)
 
@@ -245,7 +324,7 @@ update_res_res_pond <- function(res_res) {
 #' the replaced land object.
 #'
 #' @param hyd_res hydrology.res input table.
-#' @param res_id New ID of the pond (reservoir) which replaces the land object.
+#' @param hru_id  ID of the HRU which is replaced by a pond.
 #' @param area Area of the replaced land object in ha.
 #'
 #' @returns Updated hydrology.res input table.
@@ -255,8 +334,8 @@ update_res_res_pond <- function(res_res) {
 #'
 #' @keywords internal
 #'
-update_hyd_res_pond <- function(hyd_res, res_id, area) {
-  hyd_add <- tibble(name = paste0('res', res_id),
+update_hyd_res_pond <- function(hyd_res, hru_id, area) {
+  hyd_add <- tibble(name = paste0('pnd', hru_id),
                     yr_op = 1,
                     mon_op = 1,
                     area_ps = area,

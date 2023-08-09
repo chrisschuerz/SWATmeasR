@@ -4,26 +4,45 @@
 \alias{implement_ponds}
 \title{Implement ponds by replacing land objects.}
 \usage{
-implement_ponds(swat_inputs, hru_to_pond)
+implement_ponds(swat_inputs, hru_id, to_cha_id, from_cha_id = NULL)
 }
 \arguments{
 \item{swat_inputs}{List with SWAT+ input files.}
 
-\item{hru_to_pond}{Tibble which defines the changes from land objects to pond
-objects.}
+\item{hru_id}{HRU IDs which will be replaced by ponds.
+
+The input can be a single numeric value to replace a single HRU, or a
+vector of numeric values if multiple HRUs should be replaced by ponds.}
+
+\item{to_cha_id}{Channel IDs into which implemented ponds route water.
+
+The input can be a single numeric value or a vector of values. \code{to_cha_id}
+must be the same length as \code{hru_id}. Each channel ID corresponds to the
+respective \code{hru_id}.}
+
+\item{from_cha_id}{(optional) channel IDs which send water to the implemented
+ponds.
+
+The input is default \code{NA}. Then the channel routing remains unchanged.
+Multiple channels can be rerouted into a pond. If \code{hru_id} is a single
+value \code{from_cha_id} can be a single numeric value to reroute one channel,
+or a vector to reroute multiple channels into the implemented pond. If
+\code{hru_id} is a vector, \code{from_cha_id} must be a list with the same length, as
+\code{hru_id}. If for a respective \code{hru_id} no channels should be rerouted that
+list element is \code{NA}, otherwise the list element can be a value or a
+vector.}
 }
 \value{
 The \code{swat_inputs} list with updated input tables which include all
 necessary changes to replace land objects by ponds.
 }
 \description{
-\code{implement_ponds()} uses the \code{hru_to_pond} input table to implement ponds.
-The land objects defined by the \code{hru_id} in \code{hru_to_pond} are assigned an
-area of (almost) 0. The connection fractions for those land objects are
-set to 0. Reservoirs with the same area/lat/long/elev are generated (at the
-moment with default reservoir dimensions). All land objects which initially
-routed water to the land objects with \code{hru_id} now route water to the new
-reservoirs. The new reservoirs must route water to one channel each defined
-with \code{to_cha_id} in \code{hru_to_pond}. Optionally a \code{from_cha_id} can be defined
-if channels should be rerouted into the new reservoir.
+The land objects defined by the \code{hru_id} are assigned an area of (almost) 0.
+The connection fractions for those land objects are set to 0. Reservoirs with
+the same area/lat/long/elev are generated (at the moment with default
+reservoir dimensions) are implemented in the reservoir input files. All land
+objects which initially routed water to the land objects with \code{hru_id} now
+route water to the new reservoirs. The new reservoirs must route water to one
+channel each defined with \code{to_cha_id}. Optionally a \code{from_cha_id} can be
+defined if channels should be rerouted into the new reservoir.
 }
