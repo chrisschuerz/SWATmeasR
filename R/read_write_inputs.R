@@ -9,18 +9,19 @@
 #'
 read_swat_inputs <- function(project_path) {
   input_list <- list(
-    object.cnt    = read_tbl(paste0(project_path, '/object.cnt')),
-    landuse.lum   = read_tbl(paste0(project_path, '/landuse.lum')),
-    hru_data.hru  = read_tbl(paste0(project_path, '/hru-data.hru')),
-    hru.con       = read_con_file(paste0(project_path, '/hru.con')),
-    rout_unit.rtu = read_tbl(paste0(project_path, '/rout_unit.rtu')),
-    rout_unit.con = read_con_file(paste0(project_path, '/rout_unit.con')),
-    rout_unit.def = read_tbl(paste0(project_path, '/rout_unit.def')),
-    rout_unit.ele = read_tbl(paste0(project_path, '/rout_unit.ele')),
-    chandeg.con   = read_con_file(paste0(project_path, '/chandeg.con')),
-    reservoir.res = read_tbl(paste0(project_path, '/reservoir.res')),
-    hydrology.res = read_tbl(paste0(project_path, '/hydrology.res')),
-    reservoir.con = read_con_file(paste0(project_path, '/reservoir.con'))
+    object.cnt     = read_tbl(paste0(project_path, '/object.cnt')),
+    landuse.lum    = read_tbl(paste0(project_path, '/landuse.lum')),
+    management.sch = read_mgt_sch(paste0(project_path, '/management.sch')),
+    hru_data.hru   = read_tbl(paste0(project_path, '/hru-data.hru')),
+    hru.con        = read_con_file(paste0(project_path, '/hru.con')),
+    rout_unit.rtu  = read_tbl(paste0(project_path, '/rout_unit.rtu')),
+    rout_unit.con  = read_con_file(paste0(project_path, '/rout_unit.con')),
+    rout_unit.def  = read_tbl(paste0(project_path, '/rout_unit.def')),
+    rout_unit.ele  = read_tbl(paste0(project_path, '/rout_unit.ele')),
+    chandeg.con    = read_con_file(paste0(project_path, '/chandeg.con')),
+    reservoir.res  = read_tbl(paste0(project_path, '/reservoir.res')),
+    hydrology.res  = read_tbl(paste0(project_path, '/hydrology.res')),
+    reservoir.con  = read_con_file(paste0(project_path, '/reservoir.con'))
   )
 
   return(input_list)
@@ -32,13 +33,13 @@ read_swat_inputs <- function(project_path) {
 #' @param col_names optional column names vector.
 #' @param n_skip Number of header rows to skip. Default is 1.
 #'
-#' @returns The SWAT+ input file as a tibble
+#' @returns The SWAT+ input file as a tibble.
 #'
 #' @importFrom data.table fread
 #' @importFrom dplyr  %>%
 #' @importFrom tibble add_column tibble
 #'
-#' @export
+#' @keywords internal
 #'
 read_tbl <- function(file_path, col_names = NULL, n_skip = 1) {
   if (file.exists(file_path)) {
@@ -80,11 +81,33 @@ read_tbl <- function(file_path, col_names = NULL, n_skip = 1) {
   return(tbl)
 }
 
+#' Add a running ID to duplicated names
+#'
+#' @param col_name Character vector of column names
+#'
+#' @returns the `col_name` character vector with IDs for duplicated names
+#'
+#' @keywords internal
+#'
+add_suffix_to_duplicate <- function(col_name){
+  dupl <- table(col_name) %>%
+    .[. > 1]
+
+  if(length(dupl > 0)) {
+    for(i in 1:length(dupl)) {
+      col_name[col_name == names(dupl[i])] <-
+        paste0(names(dupl[i]), c('', 1:(dupl[i]-1)))
+    }
+  }
+
+  return(col_name)
+}
+
 #' Read a SWAT+ connecitivity (*.con) input file.
 #'
 #' @param file_path Path of the SWAT+ input file.
 #'
-#' @returns The connecitivity input file as a tibble
+#' @returns The connecitivity input file as a tibble.
 #'
 #' @importFrom data.table fread
 #' @importFrom dplyr across mutate
@@ -93,7 +116,7 @@ read_tbl <- function(file_path, col_names = NULL, n_skip = 1) {
 #' @importFrom tibble as_tibble
 #' @importFrom tidyselect matches starts_with
 #'
-#' @export
+#' @keywords internal
 #'
 read_con_file <- function(file_path) {
   con_mtx <- fread(file_path, skip = 2, sep = NULL, sep2 = NULL, header = F) %>%
@@ -125,6 +148,81 @@ read_con_file <- function(file_path) {
   return(con_tbl)
 }
 
+
+#' Read SWAT+ management schedule file.
+#'
+#' @param file_path Path of the SWAT+ management.sch input file.
+#'
+#' @importFrom data.table fread
+#' @importFrom dplyr mutate %>%
+#' @importFrom purrr map map_int map_chr map2 map2_df map_df set_names
+#' @importFrom readr read_lines
+#' @importFrom stringr str_replace_all str_trim str_split
+#' @importFrom tibble as_tibble
+#'
+#' @returns The SWAT+ management.sch input file as a tibble.
+#'
+#' @keywords internal
+#'
+read_mgt_sch <- function(file_path) {
+  schdl <- fread(file_path, skip = 2, sep = NULL, sep2 = NULL, header = F) %>%
+    unlist(.) %>%
+    unname(.) %>%
+    str_trim(.) %>%
+    str_replace_all(., '\t', ' ') %>%
+    str_split(., '[:space:]+')
+
+  n_elem <- map_int(schdl, length)
+  schdl  <- schdl[n_elem != 1]
+  n_elem <- n_elem[n_elem != 1]
+  schdl_def_pos <- which(n_elem == 3)
+
+  schdl_name <- map_chr(schdl_def_pos, ~ schdl[[.x]][1])
+
+  schdl_start <- schdl_def_pos + 1
+  schdl_end <- c(schdl_def_pos[2:length(schdl_def_pos)] - 1, length(schdl))
+  no_entry <- schdl_start > schdl_end
+  schdl_start[no_entry] <- length(schdl) + 1
+  schdl_end[no_entry] <- length(schdl) + 1
+  # schdl_start[no_entry] <- 1e9
+  # schdl_end[no_entry] <- 1e9
+
+  col_names <- c('op_typ', 'mon', 'day', 'hu_sch', paste0('op_data', 1:3))
+
+  schdl_mgt <- map2(schdl_start, schdl_end, ~ schdl[.x:.y]) %>%
+    map(., unlist) %>%
+    map(., as_mtx_null) %>%
+    map(., ~ as_tibble(.x, .name_repair = ~ col_names))
+
+  n_op <- map_int(schdl_mgt, nrow)
+  schdl_name <- rep(schdl_name, n_op)
+
+  schdl_mgt <- schdl_mgt %>%
+    bind_rows(.) %>%
+    mutate(., schedule = schdl_name, .before = 1)
+
+  schdl_mgt[,c(3:5, 8)] <- map_df(schdl_mgt[,c(3:5, 8)], as.numeric)
+
+  return(schdl_mgt)
+}
+
+#' Transform x to a matrix with 7 columns and fill up with NA values
+#'
+#' @param x character vector or NULL
+#'
+#' @keywords internal
+#'
+as_mtx_null <- function(x) {
+  if(is.null(x)) {
+    matrix(rep(NA_character_, 7), ncol = 7)
+  } else {
+    matrix(x, nrow = 7) %>%
+      t(.)
+  }
+}
+
+
+
 write_input_tbl <- function(tbl, file_path, fmt) {
   tbl <- map2_df(tbl, fmt, ~ sprintf(.y, .x))
 
@@ -144,27 +242,4 @@ write_input_tbl <- function(tbl, file_path, fmt) {
   input_file <- c(file_head, col_names, file_lines)
 
   write_lines(input_file, file_path)
-}
-
-#' Add a running ID to duplicated names
-#'
-#' @param col_name Character vector of column names
-#'
-#' @returns the `col_name` character vector with IDs for duplicated names
-#'
-#' @keywords internal
-#'
-#' @examples
-add_suffix_to_duplicate <- function(col_name){
-  dupl <- table(col_name) %>%
-    .[. > 1]
-
-  if(length(dupl > 0)) {
-    for(i in 1:length(dupl)) {
-      col_name[col_name == names(dupl[i])] <-
-        paste0(names(dupl[i]), c('', 1:(dupl[i]-1)))
-    }
-  }
-
-  return(col_name)
 }

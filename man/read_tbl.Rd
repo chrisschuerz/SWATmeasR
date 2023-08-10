@@ -14,8 +14,9 @@ read_tbl(file_path, col_names = NULL, n_skip = 1)
 \item{n_skip}{Number of header rows to skip. Default is 1.}
 }
 \value{
-The SWAT+ input file as a tibble
+The SWAT+ input file as a tibble.
 }
 \description{
 Read SWAT+ input files which have a tabular structure
 }
+\keyword{internal}

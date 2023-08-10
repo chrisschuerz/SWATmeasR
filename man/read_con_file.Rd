@@ -10,8 +10,9 @@ read_con_file(file_path)
 \item{file_path}{Path of the SWAT+ input file.}
 }
 \value{
-The connecitivity input file as a tibble
+The connecitivity input file as a tibble.
 }
 \description{
 Read a SWAT+ connecitivity (*.con) input file.
 }
+\keyword{internal}
