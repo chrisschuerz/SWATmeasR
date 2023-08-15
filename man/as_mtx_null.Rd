@@ -4,10 +4,12 @@
 \alias{as_mtx_null}
 \title{Transform x to a matrix with 7 columns and fill up with NA values}
 \usage{
-as_mtx_null(x)
+as_mtx_null(x, n)
 }
 \arguments{
 \item{x}{character vector or NULL}
+
+\item{n}{Number of elements}
 }
 \description{
 Transform x to a matrix with 7 columns and fill up with NA values
