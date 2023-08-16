@@ -241,10 +241,10 @@ update_cha_con_pond <- function(cha_con, from_cha_id, res_id) {
 
   # Rewrite the first (and only) connection of the channels
   # which are now fully routed into the new reservoir.
-  cha_con[cha_con$id %in% from_cha_id,]$out_tot <- '1'
+  cha_con[cha_con$id %in% from_cha_id,]$out_tot <- 1L
   cha_con[cha_con$id %in% from_cha_id,]$obj_typ_1 <- 'res'
   cha_con[cha_con$id %in% from_cha_id,]$obj_id_1 <- res_id
-  cha_con[cha_con$id %in% from_cha_id,]$frac_1 <- 1
+  cha_con[cha_con$id %in% from_cha_id,]$frac_1 <- 1.0
 
   # Delete all other connections which of the channels which are now
   # routed into the reservoir.
@@ -282,11 +282,11 @@ update_res_con_pond <- function(res_con, rtu_con, hru_id, to_cha_id, res_id) {
     mutate(id = res_id,
            name = paste0('pnd', hru_id),
            obj_id = id,
-           out_tot = '1',
+           out_tot = 1L,
            obj_typ_1 = 'sdc',
            obj_id_1 = to_cha_id,
            hyd_typ_1 = 'tot',
-           frac_1 = 1)
+           frac_1 = 1.0)
 
   res_con <- bind_rows(res_con, rtu_to_res)
 
