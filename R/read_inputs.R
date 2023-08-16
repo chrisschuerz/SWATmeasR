@@ -49,10 +49,10 @@ read_swat_inputs <- function(project_path) {
   return(input_list)
 }
 
-#' Read SWAT+ input files which have a tabular structure
+#' Read a SWAT+ input file which has a tabular structure.
 #'
 #' @param file_path Path of the SWAT+ input file.
-#' @param col_names optional column names vector.
+#' @param col_names (optional) Column names vector.
 #' @param n_skip Number of header rows to skip. Default is 1.
 #'
 #' @returns The SWAT+ input file as a tibble.
@@ -103,14 +103,18 @@ read_tbl <- function(file_path, col_names = NULL, n_skip = 1) {
   return(tbl)
 }
 
-#' Read SWAT+ management schedule file.
+#' Read a SWAT+ input file which has a tabular structure with a definition line
+#' for each parameter table section (e.g. management.sch, plant.ini, soils.sol).
 #'
-#' @param file_path Path of the SWAT+ management.sch input file.
+#' @param file_path Path of the SWAT+ input file.
+#' @param def_names Vector of column names for the entries in the definition
+#'   line.
+#' @param par_names Vector of parameter names of the parameter table.
+#' @param id_num ID vector to define the columns which are numerical values.
 #'
 #' @importFrom data.table fread
 #' @importFrom dplyr bind_rows bind_cols mutate %>%
 #' @importFrom purrr map map_int map_chr map2 map2_df map_df set_names
-#' @importFrom readr read_lines
 #' @importFrom stringr str_replace_all str_trim str_split
 #' @importFrom tibble as_tibble
 #'
@@ -166,14 +170,20 @@ read_tbl2 <- function(file_path, def_names, par_names, id_num = NULL) {
   return(tbl)
 }
 
-#' Read SWAT+ management schedule file.
+#' Read the n column of a tabular SWAT+ input file which are defined by the
+#' column positions `id_col_sel`. This is useful if e.g. last columns with
+#' description cause issues with reading due to blanks in the description text.
 #'
-#' @param file_path Path of the SWAT+ management.sch input file.
+#' @param file_path Path of the SWAT+ input file.
+#' @param col_names (optional) Character column names vector.
+#' @param n_skip Number of header rows to skip. Default is 1.
+#' @param id_col_sel Numeric vector which defines the column positions that are
+#'   returned in the table.
+#' @param id_num ID vector to define the columns which are numerical values.
 #'
 #' @importFrom data.table fread
 #' @importFrom dplyr bind_rows bind_cols mutate %>%
-#' @importFrom purrr map map_int map_chr map2 map2_df map_df set_names
-#' @importFrom readr read_lines
+#' @importFrom purrr map map_chr map_df
 #' @importFrom stringr str_replace_all str_trim str_split
 #' @importFrom tibble as_tibble
 #'
@@ -254,33 +264,15 @@ read_con_file <- function(file_path) {
                      sep = '_')
 
   con_tbl <- as_tibble(con_mtx, validate = NULL, .name_repair = 'minimal') %>%
-    set_names(c(obj_names, con_names)) %>%
-    mutate(area = as.numeric(area)) %>%
-    mutate(across(matches('id'), as.integer),
-           across(starts_with('frac'), as.numeric))
+    set_names(c(obj_names, con_names))
+
+  id_int <- c(1,3,8,13, 15 + (rep_ids - 1)*4)
+  con_tbl[ , id_int] <- map_df(con_tbl[ , id_int], as.integer)
+
+  id_dbl <- c(4:7, 17 + (rep_ids - 1)*4)
+  con_tbl[ , id_dbl] <- map_df(con_tbl[ , id_dbl], as.numeric)
 
   return(con_tbl)
-}
-
-write_tbl <- function(tbl, file_path, fmt) {
-  tbl <- map2_df(tbl, fmt, ~ sprintf(.y, .x))
-
-  n_char <- map_int(tbl[1,], nchar)
-  fmt_col_names <- paste0('%', n_char, 's')
-
-  col_names <- colnames(tbl) %>%
-    sprintf(fmt_col_names, .) %>%
-    paste(., collapse = '  ')
-
-  file_lines <- tbl %>%
-    apply(., 1, paste, collapse = '  ') %>%
-    str_replace_all(., '  NA', '    ')
-
-  file_head <- 'input file modified to implement ponds'
-
-  input_file <- c(file_head, col_names, file_lines)
-
-  write_lines(input_file, file_path)
 }
 
 #' Add a running ID to duplicated names
@@ -305,7 +297,7 @@ add_suffix_to_duplicate <- function(col_name){
   return(col_name)
 }
 
-#' Transform x to a matrix with 7 columns and fill up with NA values
+#' Transform x to a matrix with n columns and fill up with NA values
 #'
 #' @param x character vector or NULL
 #' @param n Number of elements
