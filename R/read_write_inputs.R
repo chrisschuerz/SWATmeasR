@@ -42,6 +42,10 @@ read_swat_inputs <- function(project_path) {
     reservoir.con     = read_con_file(paste0(project_path, '/reservoir.con'))
   )
 
+  file_names <- names(input_list)
+  input_list$file_updated <- rep(FALSE, length(input_list))
+  names(input_list$file_updated) <- file_names
+
   return(input_list)
 }
 
@@ -258,7 +262,7 @@ read_con_file <- function(file_path) {
   return(con_tbl)
 }
 
-write_input_tbl <- function(tbl, file_path, fmt) {
+write_tbl <- function(tbl, file_path, fmt) {
   tbl <- map2_df(tbl, fmt, ~ sprintf(.y, .x))
 
   n_char <- map_int(tbl[1,], nchar)

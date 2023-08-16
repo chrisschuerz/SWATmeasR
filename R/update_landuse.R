@@ -155,6 +155,7 @@ update_landuse <- function(swat_inputs, hru_id, type,
                    cn2 = lum_cn2,
                    ov_mann = lum_ovn) %>%
       map_df(., ~replace_na(.x, 'null'))
+      swat_inputs$file_updated['landuse.lum'] <- TRUE
     } else {
       # Use the first identical landuse to assign to the HRUs
       lum_lbl <- lum_alt[lum_par_ident][1]
@@ -168,11 +169,13 @@ update_landuse <- function(swat_inputs, hru_id, type,
               cn2 = lum_cn2,
               ov_mann = lum_ovn) %>%
       map_df(., ~replace_na(.x, 'null'))
+    swat_inputs$file_updated['landuse.lum'] <- TRUE
   }
 
   # Assign updated land use to the respective HRUs in hru-data.hru
   swat_inputs$hru_data.hru$lu_mgt[swat_inputs$hru_data.hru$id %in% hru_id] <-
     lum_lbl
+  swat_inputs$file_updated['hru_data.hru'] <- TRUE
 
   return(swat_inputs)
 }

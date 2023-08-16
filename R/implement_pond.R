@@ -79,6 +79,9 @@ implement_ponds <- function(swat_inputs, hru_id, to_cha_id, from_cha_id = NULL) 
                                                      from_cha_i,
                                                      res_id)
     }
+    swat_inputs$file_updated[c('object.cnt', 'reservoir.res', 'reservoir.con',
+                               'hydrology.res', 'rout_unit.con', 'hru.con',
+                               'chandeg.con')] <- TRUE
   }
 
   return(swat_inputs)
