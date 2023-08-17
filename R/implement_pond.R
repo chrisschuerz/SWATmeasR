@@ -38,7 +38,7 @@
 #'
 #' @export
 #'
-implement_ponds <- function(swat_inputs, hru_id, to_cha_id, from_cha_id = NULL) {
+replace_by_ponds <- function(swat_inputs, hru_id, to_cha_id, from_cha_id = NULL) {
   is_pond <- check_arguments_pond(swat_inputs, hru_id, to_cha_id, from_cha_id)
   hru_id    <- hru_id[!is_pond]
   to_cha_id <- to_cha_id[!is_pond]
