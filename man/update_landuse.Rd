@@ -8,7 +8,7 @@ update_landuse(
   swat_inputs,
   hru_id,
   type,
-  plnt_com = NULL,
+  lum_plnt = NULL,
   lum_mgt = NULL,
   lum_cn2 = NULL,
   lum_cpr = NULL,
@@ -23,9 +23,9 @@ update_landuse(
 \item{type}{Type of the new land cover. This will be the new lan duse label
 in the updated landuse.lum. \code{type} must be a single character string}
 
-\item{plnt_com}{The plant community which is assigned to the land use. A
+\item{lum_plnt}{The plant community which is assigned to the land use. A
 single character string must be provided. The passed value must be defined
-in the 'plant.ini' intput file. If (default) \code{NULL}, then 'plnt_com' will
+in the 'plant.ini' intput file. If (default) \code{NULL}, then 'lum_plnt' will
 be set 'null' in the landuse.lum.}
 
 \item{lum_mgt}{The management which is assigned to the land use. A single
@@ -59,6 +59,6 @@ The land use ('lu-mgt') in hru-data.hru of the land objects defined by the
 already exists in landuse.lum which has the exact same parametrization as
 defined with the additional input arguments. If an identical landuse already
 exists, this landuse is assigned to the HRUs. If not a new one is added with
-the defined parameters (\code{plnt_com}, \code{lum_mgt}, \code{lum_cn2}, \code{lum_cpr}, and
+the defined parameters (\code{lum_plnt}, \code{lum_mgt}, \code{lum_cn2}, \code{lum_cpr}, and
 \code{lum_ovn}).
 }
