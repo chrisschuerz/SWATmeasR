@@ -93,6 +93,7 @@ measr_project <- R6::R6Class(
                                                     self$.data$nswrm_definition,
                                                     self$.data$model_setup$original_inputs,
                                                     overwrite = FALSE)
+      self$save()
     },
 
     #' @description
@@ -104,6 +105,15 @@ measr_project <- R6::R6Class(
       saveRDS(object = obj_save,
               file = paste0(self$.data$meta$project_path, '/',
                             self$.data$meta$project_name, '.measr'))
+    },
+
+    #' @description
+    #' Reset the changes applied to the SWAT+ input files.
+    #'
+    reset = function(){
+      self$.data$model_setup$modified_inputs <-
+        self$.data$model_setup$original_inputs
+      self$save()
     }
   )
 )

@@ -65,12 +65,12 @@ load_nswrm_def <- function(file_path, type, nswrm_defs, swat_inputs, overwrite) 
 #'
 #' @importFrom dplyr %>%
 #' @importFrom purrr map_df
-#' @importFrom readr read_csv
+#' @importFrom readr cols read_csv
 #' @importFrom tidyr replace_na
 #'
 #' @keywords internal
 #'
-load_luse_def <- function(file_path, swat_intputs) {
+load_luse_def <- function(file_path, swat_inputs) {
   luse_def <- read_csv(file_path, lazy = FALSE,
                        col_types = cols(.default = 'c'), na = c('', 'NA')) %>%
     map_df(., ~replace_na(.x, 'null'))

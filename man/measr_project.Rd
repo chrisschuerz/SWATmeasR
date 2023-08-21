@@ -45,6 +45,7 @@ modified when NSWRMs are implemented.
 \item \href{#method-measr_project-new}{\code{measr_project$new()}}
 \item \href{#method-measr_project-load_nswrm_definition}{\code{measr_project$load_nswrm_definition()}}
 \item \href{#method-measr_project-save}{\code{measr_project$save()}}
+\item \href{#method-measr_project-reset}{\code{measr_project$reset()}}
 }
 }
 \if{html}{\out{<hr>}}
@@ -119,6 +120,16 @@ locations. The \code{pond} table must provide the columns \code{name},
 Save the SWATmeasR project in the SWAT+ project folder.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{measr_project$save()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-measr_project-reset"></a>}}
+\if{latex}{\out{\hypertarget{method-measr_project-reset}{}}}
+\subsection{Method \code{reset()}}{
+Reset the changes applied to the SWAT+ input files.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{measr_project$reset()}\if{html}{\out{</div>}}
 }
 
 }

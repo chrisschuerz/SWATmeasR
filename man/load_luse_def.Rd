@@ -5,7 +5,7 @@
 \title{Load the definition input table for NSWRMs which are represented by a land
 use change}
 \usage{
-load_luse_def(file_path, swat_intputs)
+load_luse_def(file_path, swat_inputs)
 }
 \arguments{
 \item{file_path}{Path to the '.csv' definition file.}
