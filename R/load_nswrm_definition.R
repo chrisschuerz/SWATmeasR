@@ -50,6 +50,8 @@ load_nswrm_def <- function(file_path, type, nswrm_defs, swat_inputs, overwrite) 
 
   if (type == 'land_use') {
     nswrm_defs$land_use <- load_luse_def(file_path, swat_inputs)
+  } else if (type == 'pond') {
+    nswrm_defs$pond <- load_pond_def(file_path, swat_inputs)
   }
 
   return(nswrm_defs)
@@ -86,35 +88,35 @@ load_luse_def <- function(file_path, swat_inputs) {
             lum_cpr_miss, lum_ovn_miss))) {
     if(any(lum_plnt_miss)) {
       plnt_msg <- paste0("'lum_plnt' not defined in 'plant.ini': ",
-                         paste(luse_def$lum_plnt[lum_plnt_miss],
+                         paste(unique(luse_def$lum_plnt[lum_plnt_miss]),
                                collapse = ', '), '\n')
     } else {
       plnt_msg <- ''
     }
     if(any(lum_mgt_miss)) {
       sch_msg  <- paste0("'lum_mgt'  not defined in 'management.sch': ",
-                         paste(luse_def$lum_mgt[lum_mgt_miss],
+                         paste(unique(luse_def$lum_mgt[lum_mgt_miss]),
                                collapse = ', '), '\n')
     } else {
       sch_msg  <- ''
     }
     if(any(lum_cn2_miss)) {
       cn2_msg <- paste0("'lum_cn2' not defined in 'cntabe.lum': ",
-                         paste(luse_def$lum_cn2[lum_cn2_miss],
+                         paste(unique(luse_def$lum_cn2[lum_cn2_miss]),
                                collapse = ', '), '\n')
     } else {
       cn2_msg <- ''
     }
     if(any(lum_cpr_miss)) {
       cpr_msg  <- paste0("'lum_cpr' not defined in 'cons_practice.lum': ",
-                         paste(luse_def$lum_cpr[lum_cpr_miss],
+                         paste(unique(luse_def$lum_cpr[lum_cpr_miss]),
                                collapse = ', '), '\n')
     } else {
       cpr_msg  <- ''
     }
     if(any(lum_ovn_miss)) {
       ovn_msg  <- paste0("'lum_ovn' not defined in 'ovn_table.lum': ",
-                         paste(luse_def$lum_ovn[lum_ovn_miss],
+                         paste(unique(luse_def$lum_ovn[lum_ovn_miss]),
                                collapse = ', '), '\n')
     } else {
       ovn_msg  <- ''
@@ -131,4 +133,82 @@ load_luse_def <- function(file_path, swat_inputs) {
   }
 
   return(luse_def)
+}
+
+#' Load the definition input table for HRUs which will be replaced by ponds
+#'
+#' @param file_path Path to the '.csv' definition file.
+#' @param swat_inputs List with SWAT+ input files.
+#'
+#' @returns The loaded pond definition table as a tibble.
+#'
+#' @importFrom dplyr mutate %>%
+#' @importFrom purrr map map_lgl
+#' @importFrom readr cols read_csv
+#'
+#' @keywords internal
+#'
+load_pond_def <- function(file_path, swat_inputs) {
+  pond_def <- read_csv(file_path, lazy = FALSE,
+                       col_types = cols(hru_id = 'i', cha_to_id = 'i',
+                                        .default = 'c'), na = c('', 'NA'))
+
+  if (!'cha_from_id' %in% names(pond_def)) {
+    pond_def <- mutate(pond_def, cha_from_id = NA_integer_)
+  } else {
+    pond_def$cha_from_id <- map(pond_def$cha_from_id,
+                                ~ eval(parse(text = paste0('c(', .x, ')'))))
+  }
+
+  hru_id_na <- is.na(pond_def$hru_id)
+  cha_id_na <- is.na(pond_def$cha_to_id)
+  is_no_hru_id    <- ! pond_def$hru_id %in% swat_inputs$hru_data.hru$id
+  is_no_cha_to_id <- ! pond_def$cha_to_id %in% swat_inputs$chandeg.con$id
+  is_no_cha_fr_id <- map_lgl(pond_def$cha_from_id,
+                       ~ !all(is.na(.x) | .x %in% swat_inputs$chandeg.con$id))
+  # hru_def_miss <-
+
+  if (any(c(hru_id_na, cha_id_na, is_no_hru_id,
+            is_no_cha_to_id, is_no_cha_fr_id))) {
+    if(any(hru_id_na)) {
+      hru_na_msg <- paste0("Row IDs where 'hru_id' returns NA: ",
+                           paste(which(hru_id_na), collapse = ', '), '\n')
+    } else {
+      hru_na_msg <- ''
+    }
+    if(any(cha_id_na)) {
+      cha_na_msg <- paste0("Row IDs where 'cha_to_id' returns NA: ",
+                           paste(which(cha_id_na), collapse = ', '), '\n')
+    } else {
+      cha_na_msg <- ''
+    }
+    if(any(is_no_hru_id)) {
+      no_hru_msg <-
+        paste0("Row IDs where 'hru_id' is not defined in hru-data.hru: ",
+               paste(which(is_no_hru_id), collapse = ', '), '\n')
+    } else {
+      no_hru_msg <- ''
+    }
+    if(any(is_no_cha_to_id)) {
+      no_cha_to_msg <-
+        paste0("Row IDs where 'cha_to_id' is not defined in channel-lte.cha: ",
+               paste(which(is_no_cha_to_id), collapse = ', '), '\n')
+    } else {
+      no_cha_to_msg <- ''
+    }
+    if(any(is_no_cha_fr_id)) {
+      no_cha_fr_msg <-
+        paste0("Row IDs where 'cha_from_id' is not defined in channel-lte.cha: ",
+               paste(which(is_no_cha_fr_id), collapse = ', '), '\n')
+    } else {
+      no_cha_fr_msg <- ''
+    }
+
+    stop('The following issues where identified for the rows of the pond ',
+         'definition input table: \n\n',
+         hru_na_msg, cha_na_msg, no_hru_msg, no_cha_to_msg, no_cha_fr_msg,
+         '\n\nPlease fix the reported issues in the .csv file and reload it.')
+  }
+
+  return(pond_def)
 }

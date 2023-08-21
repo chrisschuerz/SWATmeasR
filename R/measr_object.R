@@ -91,9 +91,27 @@ measr_project <- R6::R6Class(
     load_nswrm_definition = function(file_path, type, overwrite) {
       self$.data$nswrm_definition <- load_nswrm_def(file_path, type,
                                                     self$.data$nswrm_definition,
-                                                    self$.data$model_setup$original_inputs,
+                                                    self$.data$model_setup$modified_inputs,
                                                     overwrite = FALSE)
       self$save()
+    },
+
+    #' @description
+    #' Reload SWAT+ input files.
+    #'
+    #' @param reset Default is `FALSE`. If `TRUE` reset of already loaded input
+    #'   files is forced also when the SWAT inputs were alredy modified.
+    #'
+    reload_swat_inputs = function(reset = FALSE){
+      if(!reset & any(self$.data$model_setup$original_inputs$file_updated)) {
+        stop('Cannot reload SWAT+ input files when measures \n',
+             'were already implemented in the SWAT+ project.\n',
+             "Set 'reset = TRUE' to force a reset of the loaded inputs.")
+      }
+      self$.data$model_setup$original_inputs <- read_swat_inputs(
+        self$.data$meta$project_path)
+      self$.data$model_setup$modified_inputs <-
+        self$.data$model_setup$original_inputs
     },
 
     #' @description

@@ -44,6 +44,7 @@ modified when NSWRMs are implemented.
 \itemize{
 \item \href{#method-measr_project-new}{\code{measr_project$new()}}
 \item \href{#method-measr_project-load_nswrm_definition}{\code{measr_project$load_nswrm_definition()}}
+\item \href{#method-measr_project-reload_swat_inputs}{\code{measr_project$reload_swat_inputs()}}
 \item \href{#method-measr_project-save}{\code{measr_project$save()}}
 \item \href{#method-measr_project-reset}{\code{measr_project$reset()}}
 }
@@ -112,6 +113,24 @@ locations. The \code{pond} table must provide the columns \code{name},
 }
 }
 
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-measr_project-reload_swat_inputs"></a>}}
+\if{latex}{\out{\hypertarget{method-measr_project-reload_swat_inputs}{}}}
+\subsection{Method \code{reload_swat_inputs()}}{
+Reload SWAT+ input files.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{measr_project$reload_swat_inputs(reset = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{reset}}{Default is \code{FALSE}. If \code{TRUE} reset of already loaded input
+files is forced also when the SWAT inputs were alredy modified.}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-measr_project-save"></a>}}
