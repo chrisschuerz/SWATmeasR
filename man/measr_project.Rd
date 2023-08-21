@@ -43,6 +43,7 @@ modified when NSWRMs are implemented.
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-measr_project-new}{\code{measr_project$new()}}
+\item \href{#method-measr_project-load_nswrm_location}{\code{measr_project$load_nswrm_location()}}
 \item \href{#method-measr_project-load_nswrm_definition}{\code{measr_project$load_nswrm_definition()}}
 \item \href{#method-measr_project-reload_swat_inputs}{\code{measr_project$reload_swat_inputs()}}
 \item \href{#method-measr_project-save}{\code{measr_project$save()}}
@@ -74,13 +75,56 @@ object in the SWAT+ project folder.}
 }
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-measr_project-load_nswrm_location"></a>}}
+\if{latex}{\out{\hypertarget{method-measr_project-load_nswrm_location}{}}}
+\subsection{Method \code{load_nswrm_location()}}{
+Load the NSWRM location table from a '.csv' file into the
+\code{measr_project}.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{measr_project$load_nswrm_location(file_path, overwrite = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{file_path}}{Path to the '.csv' definition file.}
+
+\item{\code{overwrite}}{Overwrite existing location table? Default is \code{FALSE}.
+If \code{TRUE} existing location table can be overwritten.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Details}{
+The NSWRM locations are defined by the spatial objects which are
+modified by a measure implementation. The measure locations are
+provided with a .csv table. The table must have the following columns:
+\itemize{
+\item \code{id}: The ID of the implemented measure. This can be integer row
+indices. These ID values will be later on linked to a ID vector
+which defines the measures that are implemented.
+\item \code{name}: Name of the implemented measure.
+\item \code{type}: In OPTAIN a set of NSWRMs is defined which can be
+implemented in a model setup. \code{type} can be one of the folling
+labels: 'buffer', 'grassfilter', 'hedge', 'grassslope',
+'grassrchrg', 'afforest', 'pond', 'floodres', 'channres', 'swale',
+'wetland', 'cdrain', 'terrace', 'notill', 'lowtill', 'lowtillcc',
+'mulching', 'subsoiling', 'rotation', 'intercrop', 'covercrop',
+'earlysow', 'droughtplt'.
+\item \code{obj_id}: The ID of the spatial object on which the measure is
+implemented. For all \code{type}s except 'channres' the \code{obj_typ} is
+a vector of HRU IDs. For 'channres' it is a vector of channel IDs
+}
+}
+
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-measr_project-load_nswrm_definition"></a>}}
 \if{latex}{\out{\hypertarget{method-measr_project-load_nswrm_definition}{}}}
 \subsection{Method \code{load_nswrm_definition()}}{
 Load a definition table for an NSWRM type from a '.csv' file into the
 \code{measr_project}.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{measr_project$load_nswrm_definition(file_path, type, overwrite)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{measr_project$load_nswrm_definition(file_path, type, overwrite = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{

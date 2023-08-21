@@ -64,6 +64,39 @@ measr_project <- R6::R6Class(
 
     },
 
+    #' @description Load the NSWRM location table from a '.csv' file into the
+    #'   `measr_project`.
+    #'
+    #' @details The NSWRM locations are defined by the spatial objects which are
+    #'   modified by a measure implementation. The measure locations are
+    #'   provided with a .csv table. The table must have the following columns:
+      #'   - `id`: The ID of the implemented measure. This can be integer row
+      #'     indices. These ID values will be later on linked to a ID vector
+      #'     which defines the measures that are implemented.
+      #'   - `name`: Name of the implemented measure.
+      #'   - `type`: In OPTAIN a set of NSWRMs is defined which can be
+      #'     implemented in a model setup. `type` can be one of the folling
+      #'     labels: 'buffer', 'grassfilter', 'hedge', 'grassslope',
+      #'     'grassrchrg', 'afforest', 'pond', 'floodres', 'channres', 'swale',
+      #'     'wetland', 'cdrain', 'terrace', 'notill', 'lowtill', 'lowtillcc',
+      #'     'mulching', 'subsoiling', 'rotation', 'intercrop', 'covercrop',
+      #'     'earlysow', 'droughtplt'.
+      #'   - `obj_id`: The ID of the spatial object on which the measure is
+      #'     implemented. For all `type`s except 'channres' the `obj_typ` is
+      #'     a vector of HRU IDs. For 'channres' it is a vector of channel IDs
+    #'
+    #' @param file_path Path to the '.csv' definition file.
+    #' @param overwrite Overwrite existing location table? Default is `FALSE`.
+    #' If `TRUE` existing location table can be overwritten.
+    #'
+    load_nswrm_location = function(file_path, overwrite = FALSE) {
+      self$.data$nswrm_definition <- load_nswrm_loc(file_path,
+                                                    self$.data$nswrm_definition,
+                                                    self$.data$model_setup$modified_inputs,
+                                                    overwrite)
+      self$save()
+    },
+
     #' @description Load a definition table for an NSWRM type from a '.csv' file into the
     #' `measr_project`.
     #'
@@ -88,11 +121,11 @@ measr_project <- R6::R6Class(
     #' @param overwrite Overwrite existing definition table? Default is `FALSE`.
     #' If `TRUE` existing definition table can be overwritten.
     #'
-    load_nswrm_definition = function(file_path, type, overwrite) {
+    load_nswrm_definition = function(file_path, type, overwrite = FALSE) {
       self$.data$nswrm_definition <- load_nswrm_def(file_path, type,
                                                     self$.data$nswrm_definition,
                                                     self$.data$model_setup$modified_inputs,
-                                                    overwrite = FALSE)
+                                                    overwrite)
       self$save()
     },
 
