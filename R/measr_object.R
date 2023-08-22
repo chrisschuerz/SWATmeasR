@@ -109,7 +109,7 @@ measr_project <- R6::R6Class(
       #'   change. The lookup table can include the settings for the NSWRM codes
       #'   **buffer**, **edgefilter**, **hedge**, **grassslope**, **grassrchrg**
       #'   , and **afforest**. The `land_use` table must provide the columns
-      #'   `nswrm`, `lum_plnt`, `lum_mgt`, `lum_cn2`, `lum_cpr`, and
+      #'   `type`, `lum_plnt`, `lum_mgt`, `lum_cn2`, `lum_cpr`, and
       #'   `lum_ovn`.
       #' - `'pond'`: A pond definition table includes all definitions for pond
       #'   locations. The `pond` table must provide the columns `name`,

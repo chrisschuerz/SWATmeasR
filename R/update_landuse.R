@@ -65,51 +65,51 @@ update_landuse <- function(swat_inputs, hru_id, type,
 
   # Checks for all inputs if they are available in the respective SWAT+ input
   # files
-  if (! is.null(lum_plnt)) {
-    if (!lum_plnt %in% swat_inputs$plant.ini$pcom_name) {
-      stop("The 'lum_plnt' = '", lum_plnt, "' does not exist in 'plant.ini'.\n",
-           "Cannot update the land use for '", type, "' in the following HRUs:\n",
-           paste(hru_id, collapse = ', '))
-    }
-  } else {
-    lum_plnt <- 'null'
-  }
-  if (! is.null(lum_mgt)) {
-    if (!lum_mgt %in% swat_inputs$management.sch$name) {
-      stop("The 'lum_mgt' = '", lum_mgt, "' does not exist in 'management.sch'.\n",
-           "Cannot update the land use for '", type, "' in the following HRUs:\n",
-           paste(hru_id, collapse = ', '))
-    }
-  } else {
-    lum_mgt <- 'null'
-  }
-  if (! is.null(lum_cn2)) {
-    if (!lum_cn2 %in% swat_inputs$cntabe.lum$name) {
-      stop("The 'lum_cn2' = '", lum_cn2, "' does not exist in 'cntable.lum'.\n",
-           "Cannot update the land use for '", type, "' in the following HRUs:\n",
-           paste(hru_id, collapse = ', '))
-    }
-  } else {
-    lum_cn2 <- 'null'
-  }
-  if (! is.null(lum_cpr)) {
-    if (!lum_cpr %in% swat_inputs$cons_practice.lum$name) {
-      stop("The 'lum_cn2' = '", lum_cn2, "' does not exist in 'cons_practice.lum'.\n",
-           "Cannot update the land use for '", type, "' in the following HRUs:\n",
-           paste(hru_id, collapse = ', '))
-    }
-  } else {
-    lum_cpr <- 'null'
-  }
-  if (! is.null(lum_ovn)) {
-    if (!lum_ovn %in% swat_inputs$ovn_table.lum$name) {
-      stop("The 'lum_ovn' = '", lum_ovn, "' does not exist in 'ovn_table.lum'.\n",
-           "Cannot update the land use for '", type, "' in the following HRUs:\n",
-           paste(hru_id, collapse = ', '))
-    }
-  } else {
-    lum_ovn <- 'null'
-  }
+  # if (! is.null(lum_plnt)) {
+  #   if (!lum_plnt %in% swat_inputs$plant.ini$pcom_name) {
+  #     stop("The 'lum_plnt' = '", lum_plnt, "' does not exist in 'plant.ini'.\n",
+  #          "Cannot update the land use for '", type, "' in the following HRUs:\n",
+  #          paste(hru_id, collapse = ', '))
+  #   }
+  # } else {
+  #   lum_plnt <- 'null'
+  # }
+  # if (! is.null(lum_mgt)) {
+  #   if (!lum_mgt %in% swat_inputs$management.sch$name) {
+  #     stop("The 'lum_mgt' = '", lum_mgt, "' does not exist in 'management.sch'.\n",
+  #          "Cannot update the land use for '", type, "' in the following HRUs:\n",
+  #          paste(hru_id, collapse = ', '))
+  #   }
+  # } else {
+  #   lum_mgt <- 'null'
+  # }
+  # if (! is.null(lum_cn2)) {
+  #   if (!lum_cn2 %in% swat_inputs$cntabe.lum$name) {
+  #     stop("The 'lum_cn2' = '", lum_cn2, "' does not exist in 'cntable.lum'.\n",
+  #          "Cannot update the land use for '", type, "' in the following HRUs:\n",
+  #          paste(hru_id, collapse = ', '))
+  #   }
+  # } else {
+  #   lum_cn2 <- 'null'
+  # }
+  # if (! is.null(lum_cpr)) {
+  #   if (!lum_cpr %in% swat_inputs$cons_practice.lum$name) {
+  #     stop("The 'lum_cpr' = '", lum_cpr, "' does not exist in 'cons_practice.lum'.\n",
+  #          "Cannot update the land use for '", type, "' in the following HRUs:\n",
+  #          paste(hru_id, collapse = ', '))
+  #   }
+  # } else {
+  #   lum_cpr <- 'null'
+  # }
+  # if (! is.null(lum_ovn)) {
+  #   if (!lum_ovn %in% swat_inputs$ovn_table.lum$name) {
+  #     stop("The 'lum_ovn' = '", lum_ovn, "' does not exist in 'ovn_table.lum'.\n",
+  #          "Cannot update the land use for '", type, "' in the following HRUs:\n",
+  #          paste(hru_id, collapse = ', '))
+  #   }
+  # } else {
+  #   lum_ovn <- 'null'
+  # }
 
   # Get all lum names from landuse.lum
   lum_names <- swat_inputs$landuse.lum$name
@@ -130,7 +130,7 @@ update_landuse <- function(swat_inputs, hru_id, type,
     # the selected rows from landuse.lum
     lum_par_ident <- lum_i %>%
       split(., 1:nrow(.)) %>%
-      map(., ~ select(.x, lum_plnt, mgt, cn2, cons_prac, ov_mann)) %>%
+      map(., ~ select(.x, plnt_com, mgt, cn2, cons_prac, ov_mann)) %>%
       map(., ~ unlist(.x)) %>%
       map_lgl(., ~ all(.x == lum_upd_par))
 
@@ -164,7 +164,7 @@ update_landuse <- function(swat_inputs, hru_id, type,
     lum_lbl <- paste0(type, '_lum')
     swat_inputs$landuse.lum <- swat_inputs$landuse.lum %>%
       add_row(., name = lum_lbl,
-              lum_plnt = lum_plnt,
+              plnt_com = lum_plnt,
               mgt = lum_mgt,
               cn2 = lum_cn2,
               ov_mann = lum_ovn) %>%

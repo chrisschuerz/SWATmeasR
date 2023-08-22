@@ -36,7 +36,7 @@ definitions for all NSWRMs which are represented by a land use
 change. The lookup table can include the settings for the NSWRM codes
 \strong{buffer}, \strong{edgefilter}, \strong{hedge}, \strong{grassslope}, \strong{grassrchrg}
 , and \strong{afforest}. The \code{land_use} table must provide the columns
-\code{nswrm}, \code{lum_plnt}, \code{lum_mgt}, \code{lum_cn2}, \code{lum_cpr}, and
+\code{type}, \code{lum_plnt}, \code{lum_mgt}, \code{lum_cn2}, \code{lum_cpr}, and
 \code{lum_ovn}.
 \item \code{'pond'}: A pond definition table includes all definitions for pond
 locations. The \code{pond} table must provide the columns \code{name},

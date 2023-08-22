@@ -38,10 +38,11 @@ load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
                       col_types = cols(id = 'i', .default = 'c' ),
                       na = c('', 'NA'))
 
-  col_miss <- ! c('id', 'name', 'type', 'obj_id') %in%  names(nswrm_loc)
+  col_names <- c('id', 'name', 'type', 'obj_id')
+  col_miss <- ! col_names %in%  names(nswrm_loc)
   if(any(col_miss)) {
     stop('The following columns are missing in the NSWRM location table:\n',
-         c('id', 'name', 'type', 'obj_id')[col_miss])
+        col_names[col_miss])
   }
 
   if(any(is.na(nswrm_loc$id))) {
@@ -108,7 +109,7 @@ load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
 #'   change. The lookup table can include the settings for the NSWRM codes
 #'   **buffer**, **edgefilter**, **hedge**, **grassslope**, **grassrchrg**
 #'   , and **afforest**. The `land_use` table must provide the columns
-#'   `nswrm`, `lum_plnt`, `lum_mgt`, `lum_cn2`, `lum_cpr`, and
+#'   `type`, `lum_plnt`, `lum_mgt`, `lum_cn2`, `lum_cpr`, and
 #'   `lum_ovn`.
 #' - `'pond'`: A pond definition table includes all definitions for pond
 #'   locations. The `pond` table must provide the columns `name`,
@@ -158,7 +159,7 @@ load_nswrm_def <- function(file_path, type, nswrm_defs, swat_inputs, overwrite) 
                                                           'grassrchrg', 'afforest')
     luse_chg_in_loc <- unique(nswrm_defs$nswrm_locations$type[is_luse_chg])
 
-    luse_chg_not_def <- ! luse_chg_in_loc %in% nswrm_defs$land_use$nswrm
+    luse_chg_not_def <- ! luse_chg_in_loc %in% nswrm_defs$land_use$type
 
     if(any(luse_chg_not_def)) {
       stop("'land_use' definitions for the following 'nswrm's are missing:\n",
@@ -167,7 +168,7 @@ load_nswrm_def <- function(file_path, type, nswrm_defs, swat_inputs, overwrite) 
     }
 
     nswrm_defs$nswrm_locations$is_defined[
-      nswrm_defs$nswrm_locations$type %in% nswrm_defs$land_use$nswrm] <- TRUE
+      nswrm_defs$nswrm_locations$type %in% nswrm_defs$land_use$type] <- TRUE
 
   } else if (type == 'pond') {
     nswrm_defs$pond <- load_pond_def(file_path, swat_inputs)
@@ -209,13 +210,27 @@ load_luse_def <- function(file_path, swat_inputs) {
   luse_def <- read_csv(file_path, lazy = FALSE,
                        col_types = cols(.default = 'c'), na = c('', 'NA')) %>%
     map_df(., ~replace_na(.x, 'null'))
+
+  col_names <-  c('type', 'lum_plnt', 'lum_mgt',
+                  'lum_cn2', 'lum_cpr', 'lum_ovn')
+  col_miss <- ! col_names %in%  names(luse_def)
+  if(any(col_miss)) {
+    stop("The following columns are missing in the 'land_use' ",
+         "definition table:\n", col_names[col_miss])
+  }
+
   # Checks for all inputs if they are available in the respective SWAT+ input
   # files
-  lum_plnt_miss <- !luse_def$lum_plnt %in% c(swat_inputs$plant.ini$pcom_name, 'null')
-  lum_mgt_miss  <- !luse_def$lum_mgt %in% c(swat_inputs$management.sch$name, 'null')
-  lum_cn2_miss  <- !luse_def$lum_cn2 %in% c(swat_inputs$cntabe.lum$name, 'null')
-  lum_cpr_miss  <- !luse_def$lum_cpr %in% c(swat_inputs$cons_practice.lum$name, 'null')
-  lum_ovn_miss  <- !luse_def$lum_ovn %in% c(swat_inputs$ovn_table.lum$name, 'null')
+  lum_plnt_miss <- !luse_def$lum_plnt %in%
+    c(swat_inputs$plant.ini$pcom_name, 'null')
+  lum_mgt_miss  <- !luse_def$lum_mgt %in%
+    c(swat_inputs$management.sch$name, 'null')
+  lum_cn2_miss  <- !luse_def$lum_cn2 %in%
+    c(swat_inputs$cntabe.lum$name, 'null')
+  lum_cpr_miss  <- !luse_def$lum_cpr %in%
+    c(swat_inputs$cons_practice.lum$name, 'null')
+  lum_ovn_miss  <- !luse_def$lum_ovn %in%
+    c(swat_inputs$ovn_table.lum$name, 'null')
 
   if (any(c(lum_plnt_miss, lum_mgt_miss, lum_cn2_miss,
             lum_cpr_miss, lum_ovn_miss))) {
@@ -260,9 +275,11 @@ load_luse_def <- function(file_path, swat_inputs) {
          plnt_msg, sch_msg, cn2_msg, cpr_msg, ovn_msg,
          '\n\nPlease do the following to solve this issue:\n',
          'i)   Add the missing entries in the SWAT+ input files\n',
-         "ii)  Reload all SWAT+ input files with measr_object$reload_swat_inputs()\n",
+         "ii)  Reload all SWAT+ input files with ",
+         "measr_object$reload_swat_inputs()\n",
          '     (can only be done when no NSWRMs wer implemented yet)\n',
-         "iii) Load again 'land_use' definition table with measr_object$load_nswrm_definition()")
+         "iii) Load again 'land_use' definition table with ",
+         "measr_object$load_nswrm_definition()")
   }
 
   return(luse_def)
