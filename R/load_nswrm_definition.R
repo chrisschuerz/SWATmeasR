@@ -20,7 +20,7 @@ load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
     stop('Cannot load/update NSWRM definition tables when measures \n',
          'were already implemented in the SWAT+ project.\n',
          'If you want to load NSWRM definition tables in this project,\n',
-         'you have to reset the project first with measr_object$reset().')
+         'you have to reset the project first with measr_project$reset().')
   }
   if ('nswrm_locations' %in% names(nswrm_defs) & !overwrite) {
     stop("An NSWRM location table already exists for this project.\n",
@@ -48,7 +48,7 @@ load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
     stop('All NSWRMs must be defined before loading the NSWRM locations. \n\n',
          'Definitions for the following NSWRMs are still missing:\n',
          paste(nswrm_defs_miss, collapse = ', '), '\n\n',
-         "Please add the definitions with measr_object$load_nswrm_definition()",
+         "Please add the definitions with measr_project$load_nswrm_definition()",
          " before you continue.")
   }
 
@@ -152,7 +152,7 @@ load_nswrm_def <- function(file_path, type, nswrm_defs, swat_inputs, overwrite) 
     stop('Cannot load/update NSWRM definition tables when measures \n',
          'were already implemented in the SWAT+ project.\n',
          'If you want to load NSWRM definition tables in this project,\n',
-         'you have to reset the project first with measr_object$reset().')
+         'you have to reset the project first with measr_project$reset().')
   }
 
   # For testing so far only the two types land_use and pond are implemented.
@@ -275,10 +275,10 @@ load_luse_def <- function(file_path, swat_inputs) {
          '\n\nPlease do the following to solve this issue:\n',
          'i)   Add the missing entries in the SWAT+ input files\n',
          "ii)  Reload all SWAT+ input files with ",
-         "measr_object$reload_swat_inputs()\n",
+         "measr_project$reload_swat_inputs()\n",
          '     (can only be done when no NSWRMs wer implemented yet)\n',
          "iii) Load again 'land_use' definition table with ",
-         "measr_object$load_nswrm_definition()")
+         "measr_project$load_nswrm_definition()")
   }
 
   return(luse_def)

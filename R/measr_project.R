@@ -131,7 +131,7 @@ measr_project <- R6Class(
     #' @details
         #' All locations which are included in `nswrm_id` must be defined in the
         #' NSWRM location table
-        #' (`measr_object$.data$nswrm_definition$nswrm_locations`). All NSWRM
+        #' (`measr_project$.data$nswrm_definition$nswrm_locations`). All NSWRM
         #' location IDs which are included in `nswrm_id` are implemented in
         #' the SWAT+ input tables. The measures are implemented in a specific
         #' order with a certain hirachy. Therefore the implementation of a
@@ -142,7 +142,7 @@ measr_project <- R6Class(
     #'
     #' @param nswrm_id Numeric vector of NSWRM location IDs which are defined in
     #'   the NSWRM location table
-    #'   (`measr_object$.data$nswrm_definition$nswrm_locations`) with the column
+    #'   (`measr_project$.data$nswrm_definition$nswrm_locations`) with the column
     #'   `id`.
     #' @param reset Reset existing NSWRM implementations? Default is `FALSE`. If
     #'   measures were already implemented the SWAT+ input tables must be reset,

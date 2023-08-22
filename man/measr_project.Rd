@@ -166,7 +166,7 @@ Implement NSWRMs in the SWAT+ model input tables.
 \describe{
 \item{\code{nswrm_id}}{Numeric vector of NSWRM location IDs which are defined in
 the NSWRM location table
-(\code{measr_object$.data$nswrm_definition$nswrm_locations}) with the column
+(\code{measr_project$.data$nswrm_definition$nswrm_locations}) with the column
 \code{id}.}
 
 \item{\code{reset}}{Reset existing NSWRM implementations? Default is \code{FALSE}. If
@@ -179,7 +179,7 @@ tables will be reset before implementing a new set of measures.}
 \subsection{Details}{
 All locations which are included in \code{nswrm_id} must be defined in the
 NSWRM location table
-(\code{measr_object$.data$nswrm_definition$nswrm_locations}). All NSWRM
+(\code{measr_project$.data$nswrm_definition$nswrm_locations}). All NSWRM
 location IDs which are included in \code{nswrm_id} are implemented in
 the SWAT+ input tables. The measures are implemented in a specific
 order with a certain hirachy. Therefore the implementation of a
