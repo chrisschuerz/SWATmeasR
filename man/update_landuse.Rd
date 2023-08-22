@@ -7,7 +7,7 @@
 update_landuse(
   swat_inputs,
   hru_id,
-  type,
+  nswrm,
   lum_plnt = NULL,
   lum_mgt = NULL,
   lum_cn2 = NULL,
@@ -20,8 +20,8 @@ update_landuse(
 
 \item{hru_id}{HRU IDs for which the land use is updated.}
 
-\item{type}{Type of the new land cover. This will be the new lan duse label
-in the updated landuse.lum. \code{type} must be a single character string}
+\item{nswrm}{NSWRM to be implemented. This will be the new land use label
+in the updated landuse.lum. \code{nswrm} must be a single character string.}
 
 \item{lum_plnt}{The plant community which is assigned to the land use. A
 single character string must be provided. The passed value must be defined
@@ -54,8 +54,8 @@ hru-data.hru input tables.
 }
 \description{
 The land use ('lu-mgt') in hru-data.hru of the land objects defined by the
-\code{hru_id} is overwritten. The new land use label is defined by \code{type}. For
-\code{type} a new land use is defined in landuse.lum if no land use with this name
+\code{hru_id} is overwritten. The new land use label is defined by \code{nswrm}. For
+\code{nswrm} a new land use is defined in landuse.lum if no land use with this name
 already exists in landuse.lum which has the exact same parametrization as
 defined with the additional input arguments. If an identical landuse already
 exists, this landuse is assigned to the HRUs. If not a new one is added with

@@ -26,23 +26,30 @@ load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
     stop("An NSWRM location table already exists for this project.\n",
          "If the existing table should be overwritten set ",
          "'overwrite = TRUE'.")
-  } else if('nswrm_locations' %in% names(nswrm_defs) & overwrite) {
-    warning('NSWRM location table will be overwritten! ',
-            'This also requires to reload all NSWRM definitions.')
-    nswrm_defs <- list()
-  } else {
-    nswrm_defs <- list()
   }
 
   nswrm_loc <- read_csv(file_path, lazy = FALSE,
                       col_types = cols(id = 'i', .default = 'c' ),
                       na = c('', 'NA'))
 
-  col_names <- c('id', 'name', 'type', 'obj_id')
+  col_names <- c('id', 'nswrm', 'obj_id')
   col_miss <- ! col_names %in%  names(nswrm_loc)
   if(any(col_miss)) {
     stop('The following columns are missing in the NSWRM location table:\n',
         col_names[col_miss])
+  }
+
+  nswrm_loc <- nswrm_loc %>%
+    left_join(., nswrm_defs$nswrm_lookup, by = "nswrm")
+
+  nswrm_defs_miss <- unique(nswrm_loc$nswrm[is.na(nswrm_loc$type)])
+
+  if(length(nswrm_defs_miss) > 0) {
+    stop('All NSWRMs must be defined before loading the NSWRM locations. \n\n',
+         'Definitions for the following NSWRMs are still missing:\n',
+         paste(nswrm_defs_miss, collapse = ', '), '\n\n',
+         "Please add the definitions with measr_object$load_nswrm_definition()",
+         " before you continue.")
   }
 
   if(any(is.na(nswrm_loc$id))) {
@@ -53,26 +60,26 @@ load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
   nswrm_loc$obj_id <- map(nswrm_loc$obj_id,
                             ~ eval(parse(text = paste0('c(', .x, ')'))))
 
-  type_unknown <- ! unique(nswrm_loc$type) %in% c('buffer', 'grassfilter',
-                                                  'hedge', 'grassslope',
-                                                  'grassrchrg', 'afforest',
-                                                  'pond', 'floodres',
-                                                  'channres', 'swale',
-                                                  'wetland', 'cdrain',
-                                                  'terrace', 'notill',
-                                                  'lowtill', 'lowtillcc',
-                                                  'mulching', 'subsoiling',
-                                                  'rotation', 'intercrop',
-                                                  'covercrop', 'earlysow',
-                                                  'droughtplt')
-  if (any(type_unknown)) {
-    unknown_types <- unique(nswrm_loc$type)[type_unknown]
-    id_unknown_types <- nswrm_loc$id[nswrm_loc$type %in% unknown_types]
-    stop("The following NSWRM 'type's are not defined in OPTAIN:\n",
-         paste(unknown_types, collapse = ', '), '\n',
-         "Those types were defined for the following location 'id's:\n",
-         paste(id_unknown_types, collapse = ', '))
-  }
+  # type_unknown <- ! unique(nswrm_loc$type) %in% c('buffer', 'grassfilter',
+  #                                                 'hedge', 'grassslope',
+  #                                                 'grassrchrg', 'afforest',
+  #                                                 'pond', 'floodres',
+  #                                                 'channres', 'swale',
+  #                                                 'wetland', 'cdrain',
+  #                                                 'terrace', 'notill',
+  #                                                 'lowtill', 'lowtillcc',
+  #                                                 'mulching', 'subsoiling',
+  #                                                 'rotation', 'intercrop',
+  #                                                 'covercrop', 'earlysow',
+  #                                                 'droughtplt')
+  # if (any(type_unknown)) {
+  #   unknown_types <- unique(nswrm_loc$type)[type_unknown]
+  #   id_unknown_types <- nswrm_loc$id[nswrm_loc$type %in% unknown_types]
+  #   stop("The following NSWRM 'type's are not defined in OPTAIN:\n",
+  #        paste(unknown_types, collapse = ', '), '\n',
+  #        "Those types were defined for the following location 'id's:\n",
+  #        paste(id_unknown_types, collapse = ', '))
+  # }
 
   # Check if all object IDs are available in hru.con
   id_not_in_hru <- map_lgl(nswrm_loc$obj_id,
@@ -82,15 +89,14 @@ load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
                            ~ !all(.x %in% swat_inputs$chandeg.con$id))
   # id must only be a chandeg ID for channel restoration, otherwise it is an
   # HRU ID
-  id_no_obj <- ifelse(nswrm_loc$type == 'channres', id_not_in_cha, id_not_in_hru)
+  id_no_obj <- ifelse(nswrm_loc$nswrm == 'channres',
+                      id_not_in_cha, id_not_in_hru)
 
   if(any(id_no_obj)) {
     stop("The following location definitions ('id') define 'obj_id's that ",
          "are not provided in the respective SWAT+ input table:\n",
          paste(nswrm_loc$id[id_no_obj], collapse = ', '))
   }
-
-  nswrm_loc$is_defined <- FALSE
 
   nswrm_defs$nswrm_locations <- nswrm_loc
 
@@ -128,12 +134,20 @@ load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
 #' @keywords internal
 #'
 load_nswrm_def <- function(file_path, type, nswrm_defs, swat_inputs, overwrite) {
-  if (!'nswrm_locations' %in% names(nswrm_defs)) {
-    stop("The NSWRM location table was not loaded yet. \n",
-         "Load the NSWRM location table with measr_object$load_nswrm_location()",
-         " before you load the NSWRM definitions.")
+  # if (!'nswrm_locations' %in% names(nswrm_defs)) {
+  #   stop("The NSWRM location table was not loaded yet. \n",
+  #        "Load the NSWRM location table with measr_object$load_nswrm_location()",
+  #        " before you load the NSWRM definitions.")
+  # }
+
+  # If nswrm_defs does not exist yet generate empty list
+  if(is.null(nswrm_defs)) {
+    nswrm_defs <- list()
+    nswrm_defs$nswrm_lookup <- tibble(type  = character(),
+                                      nswrm = character())
   }
 
+  # New definitions can only be loaded when no NSWRMs were not implemented yet.
   if(any(swat_inputs$file_updated)) {
     stop('Cannot load/update NSWRM definition tables when measures \n',
          'were already implemented in the SWAT+ project.\n',
@@ -141,6 +155,8 @@ load_nswrm_def <- function(file_path, type, nswrm_defs, swat_inputs, overwrite) 
          'you have to reset the project first with measr_object$reset().')
   }
 
+  # For testing so far only the two types land_use and pond are implemented.
+  # Will be updated when additional routines are inlcuded.
   if (!type %in% c('land_use', 'pond')) {
     stop("'type' must be 'land_use', or 'pond'.")
   }
@@ -149,43 +165,26 @@ load_nswrm_def <- function(file_path, type, nswrm_defs, swat_inputs, overwrite) 
     stop("An NSWRM definition table for the type '", type, "' already exists.\n",
          "If the existing table should be overwritten please set ",
          "'overwrite = TRUE'.")
+  } else if(type %in% names(nswrm_defs) & overwrite) {
+    warning("NSWRM definition table for '", type, "' will be overwritten!\n",
+            'This also requires to reload the NSWRM location table if it was',
+            'already loaded before')
+    nswrm_defs$nswrm_locations <- NULL
   }
 
   if (type == 'land_use') {
     nswrm_defs$land_use <- load_luse_def(file_path, swat_inputs)
-
-    is_luse_chg <- nswrm_defs$nswrm_locations$type %in% c('buffer', 'grassfilter',
-                                                          'hedge', 'grassslope',
-                                                          'grassrchrg', 'afforest')
-    luse_chg_in_loc <- unique(nswrm_defs$nswrm_locations$type[is_luse_chg])
-
-    luse_chg_not_def <- ! luse_chg_in_loc %in% nswrm_defs$land_use$type
-
-    if(any(luse_chg_not_def)) {
-      stop("'land_use' definitions for the following 'nswrm's are missing:\n",
-           paste(luse_chg_in_loc[luse_chg_not_def], collapse = ', '), '\n',
-           'Please add them in the land use definition table and reload it.')
-    }
-
-    nswrm_defs$nswrm_locations$is_defined[
-      nswrm_defs$nswrm_locations$type %in% nswrm_defs$land_use$type] <- TRUE
+    nswrm_defs$nswrm_lookup <- update_nswrm_lookup(nswrm_defs$nswrm_lookup,
+                                                   'land_use',
+                                                   nswrm_defs$land_use$nswrm,
+                                                   overwrite)
 
   } else if (type == 'pond') {
     nswrm_defs$pond <- load_pond_def(file_path, swat_inputs)
-
-    obj_id_pond <- unlist(nswrm_defs$nswrm_locations$obj_id[
-      nswrm_defs$nswrm_locations$type == 'pond'])
-
-    obj_id_miss <- ! obj_id_pond %in% nswrm_defs$pond$hru_id
-
-    if(any(obj_id_miss)) {
-      stop("'pond' definitions for the following 'obj_id's are missing:\n",
-           paste(obj_id_pond[obj_id_miss], collapse = ', '), '\n',
-           'Please add them in the pond definition table and reload it.')
-    }
-
-    nswrm_defs$nswrm_locations$is_defined[
-      nswrm_defs$nswrm_locations$type == 'pond'] <- TRUE
+    nswrm_defs$nswrm_lookup <- update_nswrm_lookup(nswrm_defs$nswrm_lookup,
+                                                   'pond',
+                                                   'pond',
+                                                   overwrite)
   }
 
   return(nswrm_defs)
@@ -211,7 +210,7 @@ load_luse_def <- function(file_path, swat_inputs) {
                        col_types = cols(.default = 'c'), na = c('', 'NA')) %>%
     map_df(., ~replace_na(.x, 'null'))
 
-  col_names <-  c('type', 'lum_plnt', 'lum_mgt',
+  col_names <-  c('nswrm', 'lum_plnt', 'lum_mgt',
                   'lum_cn2', 'lum_cpr', 'lum_ovn')
   col_miss <- ! col_names %in%  names(luse_def)
   if(any(col_miss)) {
@@ -361,4 +360,36 @@ load_pond_def <- function(file_path, swat_inputs) {
   }
 
   return(pond_def)
+}
+
+#' Add entries for NSWRMs in the NSWRM lookup table
+#'
+#' @param nswrm_lookup NSWRM lookup table
+#' @param type NSWRM type in which the NSWRMs are grouped based on their
+#'   implementation.
+#' @param nswrm Character vector of NSWRM labels.
+#' @param overwrite If an NSWRM definition is overwritten, then the lookup is
+#'   also replaced
+#'
+#' @returns The NSWRM lookup tibble with the newly added entries.
+#'
+#' @importFrom tibble add_row
+#'
+#' @keywords internal
+#'
+update_nswrm_lookup <- function(nswrm_lookup, type, nswrm, overwrite) {
+  if(overwrite) {
+    nswrm_lookup <- nswrm_lookup[nswrm_lookup$type != type, ]
+  }
+  is_in_lookup <- nswrm %in% nswrm_lookup$nswrm
+  if(any(is_in_lookup)) {
+    stop("The following 'nswrm' labels are already in use by other measure ",
+         "types:\n", paste(nswrm[is_in_lookup], collapse = ', '), '\n',
+         "Please use different names to load those NSWRM definitions.")
+  }
+  nswrm_lookup <- add_row(nswrm_lookup,
+                          type  = type,
+                          nswrm = nswrm)
+
+  return(nswrm_lookup)
 }

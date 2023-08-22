@@ -1,8 +1,8 @@
 #' Update the landuse of selected HRUs
 #'
 #' The land use ('lu-mgt') in hru-data.hru of the land objects defined by the
-#' `hru_id` is overwritten. The new land use label is defined by `type`. For
-#' `type` a new land use is defined in landuse.lum if no land use with this name
+#' `hru_id` is overwritten. The new land use label is defined by `nswrm`. For
+#' `nswrm` a new land use is defined in landuse.lum if no land use with this name
 #' already exists in landuse.lum which has the exact same parametrization as
 #' defined with the additional input arguments. If an identical landuse already
 #' exists, this landuse is assigned to the HRUs. If not a new one is added with
@@ -11,8 +11,8 @@
 #'
 #' @param swat_inputs List with SWAT+ input files.
 #' @param hru_id HRU IDs for which the land use is updated.
-#' @param type Type of the new land cover. This will be the new lan duse label
-#'   in the updated landuse.lum. `type` must be a single character string
+#' @param nswrm NSWRM to be implemented. This will be the new land use label
+#'   in the updated landuse.lum. `nswrm` must be a single character string.
 #' @param lum_plnt The plant community which is assigned to the land use. A
 #'   single character string must be provided. The passed value must be defined
 #'   in the 'plant.ini' intput file. If (default) `NULL`, then 'lum_plnt' will
@@ -45,13 +45,13 @@
 #'
 #' @export
 #'
-update_landuse <- function(swat_inputs, hru_id, type,
+update_landuse <- function(swat_inputs, hru_id, nswrm,
                            lum_plnt = NULL, lum_mgt = NULL, lum_cn2  = NULL,
                            lum_cpr  = NULL, lum_ovn = NULL) {
   # General data type/structure checks
   stopifnot(is.numeric(hru_id))
-  stopifnot(is.character(type))
-  stopifnot(length(type) == 1)
+  stopifnot(is.character(nswrm))
+  stopifnot(length(nswrm) == 1)
   stopifnot(is.character(lum_plnt) | is.null(lum_plnt))
   stopifnot(length(lum_plnt) <= 1)
   stopifnot(is.character(lum_mgt) | is.null(lum_mgt))
@@ -68,7 +68,7 @@ update_landuse <- function(swat_inputs, hru_id, type,
   # if (! is.null(lum_plnt)) {
   #   if (!lum_plnt %in% swat_inputs$plant.ini$pcom_name) {
   #     stop("The 'lum_plnt' = '", lum_plnt, "' does not exist in 'plant.ini'.\n",
-  #          "Cannot update the land use for '", type, "' in the following HRUs:\n",
+  #          "Cannot update the land use for '", nswrm, "' in the following HRUs:\n",
   #          paste(hru_id, collapse = ', '))
   #   }
   # } else {
@@ -77,7 +77,7 @@ update_landuse <- function(swat_inputs, hru_id, type,
   # if (! is.null(lum_mgt)) {
   #   if (!lum_mgt %in% swat_inputs$management.sch$name) {
   #     stop("The 'lum_mgt' = '", lum_mgt, "' does not exist in 'management.sch'.\n",
-  #          "Cannot update the land use for '", type, "' in the following HRUs:\n",
+  #          "Cannot update the land use for '", nswrm, "' in the following HRUs:\n",
   #          paste(hru_id, collapse = ', '))
   #   }
   # } else {
@@ -86,7 +86,7 @@ update_landuse <- function(swat_inputs, hru_id, type,
   # if (! is.null(lum_cn2)) {
   #   if (!lum_cn2 %in% swat_inputs$cntabe.lum$name) {
   #     stop("The 'lum_cn2' = '", lum_cn2, "' does not exist in 'cntable.lum'.\n",
-  #          "Cannot update the land use for '", type, "' in the following HRUs:\n",
+  #          "Cannot update the land use for '", nswrm, "' in the following HRUs:\n",
   #          paste(hru_id, collapse = ', '))
   #   }
   # } else {
@@ -95,7 +95,7 @@ update_landuse <- function(swat_inputs, hru_id, type,
   # if (! is.null(lum_cpr)) {
   #   if (!lum_cpr %in% swat_inputs$cons_practice.lum$name) {
   #     stop("The 'lum_cpr' = '", lum_cpr, "' does not exist in 'cons_practice.lum'.\n",
-  #          "Cannot update the land use for '", type, "' in the following HRUs:\n",
+  #          "Cannot update the land use for '", nswrm, "' in the following HRUs:\n",
   #          paste(hru_id, collapse = ', '))
   #   }
   # } else {
@@ -104,7 +104,7 @@ update_landuse <- function(swat_inputs, hru_id, type,
   # if (! is.null(lum_ovn)) {
   #   if (!lum_ovn %in% swat_inputs$ovn_table.lum$name) {
   #     stop("The 'lum_ovn' = '", lum_ovn, "' does not exist in 'ovn_table.lum'.\n",
-  #          "Cannot update the land use for '", type, "' in the following HRUs:\n",
+  #          "Cannot update the land use for '", nswrm, "' in the following HRUs:\n",
   #          paste(hru_id, collapse = ', '))
   #   }
   # } else {
@@ -113,12 +113,12 @@ update_landuse <- function(swat_inputs, hru_id, type,
 
   # Get all lum names from landuse.lum
   lum_names <- swat_inputs$landuse.lum$name
-  # Find all alternative names with for the input argument 'type'
+  # Find all alternative names with for the input argument 'nswrm'
   lum_alt <- lum_names[str_detect(lum_names,
-                                  paste0(type, '_lum|',
-                                         type, '[:digit:]+', '_lum'))]
+                                  paste0(nswrm, '_lum|',
+                                         nswrm, '[:digit:]+', '_lum'))]
 
-  # If type_lum or any of the alternatives are available check if their
+  # If nswrm_lum or any of the alternatives are available check if their
   # parameters match. Otherwise generate a new landuse.lum entry
   if(length(lum_alt) > 0) {
     # Get all lines for the lum alternatives from landuse.lum
@@ -137,15 +137,15 @@ update_landuse <- function(swat_inputs, hru_id, type,
     # If non of the landuse.lum lines do have idntical parameters to the input
     # arguments create a new entry in landuse.lum
     if (! any(lum_par_ident)) {
-      # Identify maximum ID which was assigned to this type
+      # Identify maximum ID which was assigned to this nswrm
       id_max <- lum_alt %>%
-        str_remove_all(., paste0(type, '_lum')) %>%
+        str_remove_all(., paste0(nswrm, '_lum')) %>%
         as.numeric(.) %>%
         c(0,.) %>%
         max(., na.rm = TRUE)
 
       # Create new lum label
-      lum_lbl <- paste0(type, id_max+1, '_lum')
+      lum_lbl <- paste0(nswrm, id_max+1, '_lum')
 
       # Add entry in landuse lum with the new name and parameters
       swat_inputs$landuse.lum <- swat_inputs$landuse.lum %>%
@@ -161,7 +161,7 @@ update_landuse <- function(swat_inputs, hru_id, type,
       lum_lbl <- lum_alt[lum_par_ident][1]
     }
   } else {
-    lum_lbl <- paste0(type, '_lum')
+    lum_lbl <- paste0(nswrm, '_lum')
     swat_inputs$landuse.lum <- swat_inputs$landuse.lum %>%
       add_row(., name = lum_lbl,
               plnt_com = lum_plnt,
