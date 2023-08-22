@@ -45,6 +45,7 @@ modified when NSWRMs are implemented.
 \item \href{#method-measr_project-new}{\code{measr_project$new()}}
 \item \href{#method-measr_project-load_nswrm_location}{\code{measr_project$load_nswrm_location()}}
 \item \href{#method-measr_project-load_nswrm_definition}{\code{measr_project$load_nswrm_definition()}}
+\item \href{#method-measr_project-implement_nswrm}{\code{measr_project$implement_nswrm()}}
 \item \href{#method-measr_project-reload_swat_inputs}{\code{measr_project$reload_swat_inputs()}}
 \item \href{#method-measr_project-save}{\code{measr_project$save()}}
 \item \href{#method-measr_project-reset}{\code{measr_project$reset()}}
@@ -121,8 +122,8 @@ a vector of HRU IDs. For 'channres' it is a vector of channel IDs
 \if{html}{\out{<a id="method-measr_project-load_nswrm_definition"></a>}}
 \if{latex}{\out{\hypertarget{method-measr_project-load_nswrm_definition}{}}}
 \subsection{Method \code{load_nswrm_definition()}}{
-Load a definition table for an NSWRM type from a '.csv' file into the
-\code{measr_project}.
+Load a definition table for an NSWRM type from a '.csv' file
+into the \code{measr_project}.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{measr_project$load_nswrm_definition(file_path, type, overwrite = FALSE)}\if{html}{\out{</div>}}
 }
@@ -155,6 +156,44 @@ change. The lookup table can include the settings for the NSWRM codes
 locations. The \code{pond} table must provide the columns \code{name},
 \code{to_cha_id}, and \code{from_cha_id}.
 }
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-measr_project-implement_nswrm"></a>}}
+\if{latex}{\out{\hypertarget{method-measr_project-implement_nswrm}{}}}
+\subsection{Method \code{implement_nswrm()}}{
+Implement NSWRMs in the SWAT+ model input tables.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{measr_project$implement_nswrm(nswrm_id, reset = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{nswrm_id}}{Numeric vector of NSWRM location IDs which are defined in
+the NSWRM location table
+(\code{measr_object$.data$nswrm_definition$nswrm_locations}) with the column
+\code{id}.}
+
+\item{\code{reset}}{Reset existing NSWRM implementations? Default is \code{FALSE}. If
+measures were already implemented the SWAT+ input tables must be reset,
+before implementing a new set of measures. If \code{TRUE} the SWAT+ input
+tables will be reset before implementing a new set of measures.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Details}{
+All locations which are included in \code{nswrm_id} must be defined in the
+NSWRM location table
+(\code{measr_object$.data$nswrm_definition$nswrm_locations}). All NSWRM
+location IDs which are included in \code{nswrm_id} are implemented in
+the SWAT+ input tables. The measures are implemented in a specific
+order with a certain hirachy. Therefore the implementation of a
+measure can be overruled by the implementation of another measure
+which would be implemented by using the same spatial object. For
+example the implementation of a pond overrules a land use change
+to grassland that is performed to implement a grassed waterway.
 }
 
 }

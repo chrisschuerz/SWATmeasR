@@ -59,8 +59,10 @@ measr_project <- R6::R6Class(
 
       self$.data$meta$project_name <- project_name
       self$.data$meta$project_path <- project_path
-      self$.data$model_setup$original_inputs <- read_swat_inputs(project_path)
-      self$.data$model_setup$modified_inputs <- self$.data$model_setup$original_inputs
+      self$.data$model_setup$original_inputs <-
+        read_swat_inputs(project_path)
+      self$.data$model_setup$modified_inputs <-
+        self$.data$model_setup$original_inputs
 
     },
 
@@ -90,15 +92,17 @@ measr_project <- R6::R6Class(
     #' If `TRUE` existing location table can be overwritten.
     #'
     load_nswrm_location = function(file_path, overwrite = FALSE) {
-      self$.data$nswrm_definition <- load_nswrm_loc(file_path,
-                                                    self$.data$nswrm_definition,
-                                                    self$.data$model_setup$modified_inputs,
-                                                    overwrite)
+      self$.data$nswrm_definition <- load_nswrm_loc(
+        file_path,
+        self$.data$nswrm_definition,
+        self$.data$model_setup$modified_inputs,
+        overwrite
+        )
       self$save()
     },
 
-    #' @description Load a definition table for an NSWRM type from a '.csv' file into the
-    #' `measr_project`.
+    #' @description Load a definition table for an NSWRM type from a '.csv' file
+    #' into the `measr_project`.
     #'
     #' @details
       #' The different `type` options represent different groups of NSWRMs. The
@@ -122,10 +126,45 @@ measr_project <- R6::R6Class(
     #' If `TRUE` existing definition table can be overwritten.
     #'
     load_nswrm_definition = function(file_path, type, overwrite = FALSE) {
-      self$.data$nswrm_definition <- load_nswrm_def(file_path, type,
-                                                    self$.data$nswrm_definition,
-                                                    self$.data$model_setup$modified_inputs,
-                                                    overwrite)
+      self$.data$nswrm_definition <- load_nswrm_def(
+        file_path, type,
+        self$.data$nswrm_definition,
+        self$.data$model_setup$modified_inputs,
+        overwrite
+        )
+      self$save()
+    },
+
+    #' @description Implement NSWRMs in the SWAT+ model input tables.
+    #'
+    #' @details
+        #' All locations which are included in `nswrm_id` must be defined in the
+        #' NSWRM location table
+        #' (`measr_object$.data$nswrm_definition$nswrm_locations`). All NSWRM
+        #' location IDs which are included in `nswrm_id` are implemented in
+        #' the SWAT+ input tables. The measures are implemented in a specific
+        #' order with a certain hirachy. Therefore the implementation of a
+        #' measure can be overruled by the implementation of another measure
+        #' which would be implemented by using the same spatial object. For
+        #' example the implementation of a pond overrules a land use change
+        #' to grassland that is performed to implement a grassed waterway.
+    #'
+    #' @param nswrm_id Numeric vector of NSWRM location IDs which are defined in
+    #'   the NSWRM location table
+    #'   (`measr_object$.data$nswrm_definition$nswrm_locations`) with the column
+    #'   `id`.
+    #' @param reset Reset existing NSWRM implementations? Default is `FALSE`. If
+    #'   measures were already implemented the SWAT+ input tables must be reset,
+    #'   before implementing a new set of measures. If `TRUE` the SWAT+ input
+    #'   tables will be reset before implementing a new set of measures.
+    #'
+    implement_nswrm = function(nswrm_id, reset = FALSE) {
+      self$.data$model_setup$modified_inputs <- implement_nswrm(
+        nswrm_id,
+        self$.data$nswrm_definition,
+        self$.data$model_setup$modified_inputs,
+        reset
+      )
       self$save()
     },
 
