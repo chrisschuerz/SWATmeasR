@@ -10,6 +10,7 @@
 #' @returns The list with NSWRM definition tables with the NSWRM location table
 #'   added.
 #'
+#' @importFrom dplyr left_join %>%
 #' @importFrom readr cols read_csv
 #' @importFrom purrr map map_lgl
 #'
@@ -60,27 +61,6 @@ load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
   nswrm_loc$obj_id <- map(nswrm_loc$obj_id,
                             ~ eval(parse(text = paste0('c(', .x, ')'))))
 
-  # type_unknown <- ! unique(nswrm_loc$type) %in% c('buffer', 'grassfilter',
-  #                                                 'hedge', 'grassslope',
-  #                                                 'grassrchrg', 'afforest',
-  #                                                 'pond', 'floodres',
-  #                                                 'channres', 'swale',
-  #                                                 'wetland', 'cdrain',
-  #                                                 'terrace', 'notill',
-  #                                                 'lowtill', 'lowtillcc',
-  #                                                 'mulching', 'subsoiling',
-  #                                                 'rotation', 'intercrop',
-  #                                                 'covercrop', 'earlysow',
-  #                                                 'droughtplt')
-  # if (any(type_unknown)) {
-  #   unknown_types <- unique(nswrm_loc$type)[type_unknown]
-  #   id_unknown_types <- nswrm_loc$id[nswrm_loc$type %in% unknown_types]
-  #   stop("The following NSWRM 'type's are not defined in OPTAIN:\n",
-  #        paste(unknown_types, collapse = ', '), '\n',
-  #        "Those types were defined for the following location 'id's:\n",
-  #        paste(id_unknown_types, collapse = ', '))
-  # }
-
   # Check if all object IDs are available in hru.con
   id_not_in_hru <- map_lgl(nswrm_loc$obj_id,
                            ~ !all(.x %in% swat_inputs$hru.con$id))
@@ -121,7 +101,7 @@ load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
 #'   locations. The `pond` table must provide the columns `name`,
 #'   `to_cha_id`, and `from_cha_id`.
 #'
-#' @param file_path Path to the '.csv' definition file.
+#' @param file_path Path to the '.csv' or '.rds' definition file.
 #' @param type Type of the NSWRM which is defined by this input file. The
 #'   type must be one of the options `'land_use'`, `'pond'`.
 #' @param nswrm_defs List with already loaded NSWRM definition tables
@@ -157,8 +137,8 @@ load_nswrm_def <- function(file_path, type, nswrm_defs, swat_inputs, overwrite) 
 
   # For testing so far only the two types land_use and pond are implemented.
   # Will be updated when additional routines are inlcuded.
-  if (!type %in% c('land_use', 'pond')) {
-    stop("'type' must be 'land_use', or 'pond'.")
+  if (!type %in% c('land_use', 'management', 'pond')) {
+    stop("'type' must be 'land_use', 'management', or 'pond'.")
   }
 
   if (type %in% names(nswrm_defs) & !overwrite) {
@@ -179,6 +159,12 @@ load_nswrm_def <- function(file_path, type, nswrm_defs, swat_inputs, overwrite) 
                                                    nswrm_defs$land_use$nswrm,
                                                    overwrite)
 
+  } else if (type == 'management') {
+    nswrm_defs$management <- load_mgt_def(file_path, swat_inputs)
+    nswrm_defs$nswrm_lookup <- update_nswrm_lookup(nswrm_defs$nswrm_lookup,
+                                                   'management',
+                                                   names(nswrm_defs$management),
+                                                   overwrite)
   } else if (type == 'pond') {
     nswrm_defs$pond <- load_pond_def(file_path, swat_inputs)
     nswrm_defs$nswrm_lookup <- update_nswrm_lookup(nswrm_defs$nswrm_lookup,
@@ -282,6 +268,23 @@ load_luse_def <- function(file_path, swat_inputs) {
   }
 
   return(luse_def)
+}
+
+#' Load the definition input table for NSWRMs which are represented by a land
+#' use change
+#'
+#' @param file_path Path to the '.csv' definition file.
+#' @param swat_inputs List with SWAT+ input files.
+#'
+#' @returns The loaded land use definition table as a tibble.
+#'
+#' @importFrom readr read_rds
+#'
+#' @keywords internal
+#'
+load_mgt_def <- function(file_path, swat_inputs) {
+  mgt_def <- read_rds(file_path)
+  return(mgt_def)
 }
 
 #' Load the definition input table for HRUs which will be replaced by ponds
