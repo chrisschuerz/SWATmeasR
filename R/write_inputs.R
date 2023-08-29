@@ -34,9 +34,8 @@ write_swat_inputs <- function(swat_inputs, file_updated, project_path) {
                fmt_par = fmt_par_mgt)
   }
   if(file_updated['plant.ini']) {
-    fmt_def_ini <- c('%-24s', rep('%9.0f', 2))
-    fmt_par_ini <- c('%16s', rep('%8.0f', 2), '%12.5f',
-                     rep('%16s', 2), '%12.5f')
+    fmt_def_ini <- c('%-16s', '%8.0f', '%10.0f')
+    fmt_par_ini <- c('%16s', '%12s', rep('%12.5f', 6))
     write_tbl2(swat_inputs$plant.ini,
                paste0(project_path, '/plant.ini'),
                fmt_def = fmt_def_ini,

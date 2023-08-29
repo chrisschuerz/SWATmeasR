@@ -112,13 +112,13 @@ read_tbl <- function(file_path, col_names = NULL, n_skip = 1) {
 #' @param par_names Vector of parameter names of the parameter table.
 #' @param id_num ID vector to define the columns which are numerical values.
 #'
+#' @returns The SWAT+ management.sch input file as a tibble.
+#'
 #' @importFrom data.table fread
 #' @importFrom dplyr bind_rows bind_cols mutate %>%
 #' @importFrom purrr map map_int map_chr map2 map2_df map_df set_names
 #' @importFrom stringr str_replace_all str_trim str_split
 #' @importFrom tibble as_tibble
-#'
-#' @returns The SWAT+ management.sch input file as a tibble.
 #'
 #' @keywords internal
 #'
@@ -181,13 +181,13 @@ read_tbl2 <- function(file_path, def_names, par_names, id_num = NULL) {
 #'   returned in the table.
 #' @param id_num ID vector to define the columns which are numerical values.
 #'
+#' @returns The SWAT+ management.sch input file as a tibble.
+#'
 #' @importFrom data.table fread
 #' @importFrom dplyr bind_rows bind_cols mutate %>%
 #' @importFrom purrr map map_chr map_df
 #' @importFrom stringr str_replace_all str_trim str_split
 #' @importFrom tibble as_tibble
-#'
-#' @returns The SWAT+ management.sch input file as a tibble.
 #'
 #' @keywords internal
 #'
