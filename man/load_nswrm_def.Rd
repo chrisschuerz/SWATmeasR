@@ -8,7 +8,7 @@
 load_nswrm_def(file_path, type, nswrm_defs, swat_inputs, overwrite)
 }
 \arguments{
-\item{file_path}{Path to the '.csv' definition file.}
+\item{file_path}{Path to the '.csv' or '.rds' definition file.}
 
 \item{type}{Type of the NSWRM which is defined by this input file. The
 type must be one of the options \code{'land_use'}, \code{'pond'}.}

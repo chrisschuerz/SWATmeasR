@@ -5,10 +5,13 @@
 \title{Write the SWAT+ input tables from the \code{swat_input} list object which were
 updated by implementing NSWRMs to SWAT+ input text files.}
 \usage{
-write_swat_inputs(swat_inputs, project_path)
+write_swat_inputs(swat_inputs, file_updated, project_path)
 }
 \arguments{
 \item{swat_inputs}{List of SWAT+ input tables.}
+
+\item{file_updated}{Named boolean vector which indicated which file was
+updated and should therefore be written.}
 
 \item{project_path}{Path to the SWAT project folder on the hard drive (i.e.
 txtinout folder).}

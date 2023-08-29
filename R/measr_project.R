@@ -76,11 +76,17 @@ measr_project <- R6Class(
       #'   , and **afforest**. The `land_use` table must provide the columns
       #'   `type`, `lum_plnt`, `lum_mgt`, `lum_cn2`, `lum_cpr`, and
       #'   `lum_ovn`.
+      #' - `'management'`: The management definition is an `*.rds` object which
+      #'   must be prepared with the function
+      #'   `prepare_management_scenario_inputs()`. The function uses the
+      #'   `SWATfarmR` projects which are located in the `project_path` and
+      #'   generates the file `'mgt_scenarios.rds'` which is the required input
+      #'   to define management related NSWRMs.
       #' - `'pond'`: A pond definition table includes all definitions for pond
       #'   locations. The `pond` table must provide the columns `name`,
       #'   `to_cha_id`, and `from_cha_id`.
     #'
-    #' @param file_path Path to the '.csv' definition file.
+    #' @param file_path Path to the '.csv' or '.rds' definition file.
     #' @param type Type of the NSWRM which is defined by this input file. The
     #'   type must be one of the options `'land_use'`, `'pond'`.
     #' @param overwrite Overwrite existing definition table? Default is `FALSE`.
@@ -178,6 +184,15 @@ measr_project <- R6Class(
     },
 
     #' @description
+    #' Write updated SWAT+ input files to `project_path`.
+    #'
+    write_swat_inputs = function(){
+      write_swat_inputs(self$.data$model_setup$modified_inputs,
+                        self$.data$model_setup$modified_inputs$file_updated,
+                        self$.data$meta$project_path)
+    },
+
+    #' @description
     #' Save the SWATmeasR project in the SWAT+ project folder.
     #'
     save = function(){
@@ -191,7 +206,17 @@ measr_project <- R6Class(
     #' @description
     #' Reset the changes applied to the SWAT+ input files.
     #'
-    reset = function(){
+    #' @param write_files Should the original files of the files which were
+    #'  changed als be rewritten in the project folder? Default `FALSE` only
+    #'  resets the tables in the `measr_project`. `TRUE` also resets the
+    #'  respective input files in `project_path`.
+    #'
+    reset = function(write_files = FALSE){
+      if(write_files) {
+        write_swat_inputs(self$.data$model_setup$original_inputs,
+                          self$.data$model_setup$modified_inputs$file_updated,
+                          self$.data$meta$project_path)
+      }
       self$.data$model_setup$modified_inputs <-
         self$.data$model_setup$original_inputs
       self$save()

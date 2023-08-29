@@ -2,6 +2,8 @@
 #' updated by implementing NSWRMs to SWAT+ input text files.
 #'
 #' @param swat_inputs List of SWAT+ input tables.
+#' @param file_updated Named boolean vector which indicated which file was
+#'   updated and should therefore be written.
 #' @param project_path Path to the SWAT project folder on the hard drive (i.e.
 #'   txtinout folder).
 #'
@@ -9,20 +11,20 @@
 #'
 #' @export
 #'
-write_swat_inputs <- function(swat_inputs, project_path) {
-  if(swat_inputs$file_updated['object.cnt']) {
+write_swat_inputs <- function(swat_inputs, file_updated, project_path) {
+  if(file_updated['object.cnt']) {
     fmt_obj_cnt <- c('%-16s', rep('%12.5f', 2), rep('%8d', 18))
     write_tbl(swat_inputs$object.cnt,
               paste0(project_path, '/object.cnt'),
               fmt_obj_cnt)
   }
-  if(swat_inputs$file_updated['landuse.lum']) {
+  if(file_updated['landuse.lum']) {
     fmt_lu_lum <- c('%-20s', rep('%16s', 13))
     write_tbl(swat_inputs$landuse.lum,
               paste0(project_path, '/landuse.lum'),
               fmt_lu_lum)
   }
-  if(swat_inputs$file_updated['management.sch']) {
+  if(file_updated['management.sch']) {
     fmt_def_mgt <- c('%-24s', rep('%9.0f', 2))
     fmt_par_mgt <- c('%16s', rep('%8.0f', 2), '%12.5f',
                      rep('%16s', 2), '%12.5f')
@@ -31,7 +33,7 @@ write_swat_inputs <- function(swat_inputs, project_path) {
                fmt_def = fmt_def_mgt,
                fmt_par = fmt_par_mgt)
   }
-  if(swat_inputs$file_updated['plant.ini']) {
+  if(file_updated['plant.ini']) {
     fmt_def_ini <- c('%-24s', rep('%9.0f', 2))
     fmt_par_ini <- c('%16s', rep('%8.0f', 2), '%12.5f',
                      rep('%16s', 2), '%12.5f')
@@ -40,13 +42,13 @@ write_swat_inputs <- function(swat_inputs, project_path) {
                fmt_def = fmt_def_ini,
                fmt_par = fmt_par_ini)
   }
-  if(swat_inputs$file_updated['hru_data.hru']) {
+  if(file_updated['hru_data.hru']) {
     fmt_hru_hru <- c('%8d', '%-16s', rep('%16s', 8))
     write_tbl(swat_inputs$hru_data.hru,
               paste0(project_path, '/hru-data.hru'),
               fmt_hru_hru)
   }
-  if(swat_inputs$file_updated['hru.con']) {
+  if(file_updated['hru.con']) {
     n_con <- (ncol(swat_inputs$hru.con) - 13) / 4
     fmt_hru_con <- c('%8d', '%-16s', '%8d', rep('%12.5f', 4),
                      '%8d', '%16s', rep('%8s', 3), '%8d',
@@ -55,13 +57,13 @@ write_swat_inputs <- function(swat_inputs, project_path) {
               paste0(project_path, '/hru.con'),
               fmt_hru_con)
   }
-  if(swat_inputs$file_updated['rout_unit.rtu']) {
+  if(file_updated['rout_unit.rtu']) {
     fmt_rtu_rtu <- c('%8d', rep('%16s', 5))
     write_tbl(swat_inputs$rout_unit.rtu,
               paste0(project_path, '/rout_unit.rtu'),
               fmt_rtu_rtu)
   }
-  if(swat_inputs$file_updated['rout_unit.con']) {
+  if(file_updated['rout_unit.con']) {
     n_con <- (ncol(swat_inputs$rout_unit.con) - 13) / 4
     fmt_rtu_con <- c('%8d', '%-16s', '%8d', rep('%12.5f', 4),
                      '%8d', '%16s', rep('%8s', 3), '%8d',
@@ -70,19 +72,19 @@ write_swat_inputs <- function(swat_inputs, project_path) {
               paste0(project_path, '/rout_unit.con'),
               fmt_rtu_con)
   }
-  if(swat_inputs$file_updated['rout_unit.def']) {
+  if(file_updated['rout_unit.def']) {
     fmt_rtu_def <- c('%8d', '%-16s', '%8d', '%8d')
     write_tbl(swat_inputs$rout_unit.def,
               paste0(project_path, '/rout_unit.def'),
               fmt_rtu_def)
   }
-  if(swat_inputs$file_updated['rout_unit.ele']) {
+  if(file_updated['rout_unit.ele']) {
     fmt_rtu_ele <- c('%8d', '%-16s', '%16s', '%8d', '%12.5f', '%16d')
     write_tbl(swat_inputs$rout_unit.ele,
               paste0(project_path, '/rout_unit.ele'),
               fmt_rtu_ele)
   }
-  if(swat_inputs$file_updated['chandeg.con']) {
+  if(file_updated['chandeg.con']) {
     n_con <- (ncol(swat_inputs$chandeg.con) - 13) / 4
     fmt_sdc_con <- c('%8d', '%-16s', '%8d', rep('%12.5f', 4),
                      '%8d', '%16s', rep('%8s', 3), '%8d',
@@ -91,19 +93,19 @@ write_swat_inputs <- function(swat_inputs, project_path) {
               paste0(project_path, '/chandeg.con'),
               fmt_sdc_con)
   }
-  if(swat_inputs$file_updated['reservoir.res']) {
+  if(file_updated['reservoir.res']) {
     fmt_res_res <- c('%8d', '%-16s', rep('%16s', 5))
     write_tbl(swat_inputs$reservoir.res,
               paste0(project_path, '/reservoir.res'),
               fmt_res_res)
   }
-  if(swat_inputs$file_updated['hydrology.res']) {
+  if(file_updated['hydrology.res']) {
     fmt_hyd_res <- c('%-16s', '%8d', '%8d', rep('%12.5f', 8))
     write_tbl(swat_inputs$hydrology.res,
               paste0(project_path, '/hydrology.res'),
               fmt_hyd_res)
   }
-  if(swat_inputs$file_updated['reservoir.con']) {
+  if(file_updated['reservoir.con']) {
     n_con <- (ncol(swat_inputs$reservoir.con) - 13) / 4
     fmt_res_con <- c('%8d', '%-16s', '%8d', rep('%12.5f', 4),
                      '%8d', '%16s', rep('%8s', 3), '%8d',
