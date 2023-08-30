@@ -97,6 +97,12 @@ load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
 #'   , and **afforest**. The `land_use` table must provide the columns
 #'   `type`, `lum_plnt`, `lum_mgt`, `lum_cn2`, `lum_cpr`, and
 #'   `lum_ovn`.
+#' - `'management'`: The management definition is an `*.rds` object which
+#'   must be prepared with the function
+#'   `prepare_management_scenario_inputs()`. The function uses the
+#'   `SWATfarmR` projects which are located in the `project_path` and
+#'   generates the file `'mgt_scenarios.rds'` which is the required input
+#'   to define management related NSWRMs.
 #' - `'pond'`: A pond definition table includes all definitions for pond
 #'   locations. The `pond` table must provide the columns `name`,
 #'   `to_cha_id`, and `from_cha_id`.
@@ -284,6 +290,37 @@ load_luse_def <- function(file_path, swat_inputs) {
 #'
 load_mgt_def <- function(file_path, swat_inputs) {
   mgt_def <- read_rds(file_path)
+
+  if(any(swat_inputs$hru_data.hru$lu_mgt != mgt_def$status_quo$hru_data$lu_mgt)) {
+    stop("The 'lu_mgt' for the status quo case in the management definition \n",
+         "does not match the 'lu_mgt' labels of hru-data.hru of the SWAT+ project.")
+  }
+  n_op_mgt <- distinct(swat_inputs$management.sch, name, numb_ops) %>%
+    set_names(c('name', 'numb_ops_mgt'))
+  n_op_quo <- distinct(mgt_def$status_quo$management.sch, name, numb_ops) %>%
+    left_join(., n_op_mgt, by = 'name') %>%
+    mutate(numb_ops_mgt = ifelse(is.na(numb_ops_mgt), -999, numb_ops_mgt)) %>%
+    mutate(n_diff = numb_ops - numb_ops_mgt)
+
+  if(any(n_op_quo$n_diff != 0)) {
+    stop("The number of operations defined in the 'management.sch' for the ",
+         "status quo case in the management definition\n",
+         "does not match the number operations defined in the SWAT+ project.\n")
+  }
+
+  n_op_max <- filter(n_op_quo, numb_ops == max(numb_ops))[1,]
+
+  mgt_op_max  <- filter(swat_inputs$management.sch, name == n_op_max$name)
+  mgt_quo_max <- filter(mgt_def$status_quo$management.sch, name == n_op_max$name)
+
+  if(any(mgt_op_max$op_typ != mgt_quo_max$op_typ) |
+     any(mgt_op_max$mon    != mgt_quo_max$mon)    |
+     any(mgt_op_max$day    != mgt_quo_max$day)) {
+    stop("Operations defined in the 'management.sch' for the ",
+         "status quo case in the management definition\n",
+         "do not match the operations defined in the SWAT+ project.\n")
+  }
+
   return(mgt_def)
 }
 

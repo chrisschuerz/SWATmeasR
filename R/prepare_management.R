@@ -20,7 +20,7 @@
 #'   the management schedules for the scenarios and the status quo are written
 #'   as '.csv' files into the folder '<yyyymmdd_hhmm>_management_scenarios'.
 #'
-#' @importFrom dplyr bind_rows %>%
+#' @importFrom dplyr bind_rows distinct left_join select %>%
 #' @importFrom purrr map map_chr map_lgl map2
 #' @importFrom readr read_csv write_csv write_rds
 #' @importFrom stringr str_remove
@@ -44,7 +44,7 @@ prepare_management_scenario_inputs <- function(project_path, status_quo,
     }
   }
 
-  # Load scenario farmR -----------------------------------------------------
+  # Load farmR projects ----------------------------------------------------
   #
   # Exclude the status quo from the scenario names.
   # If scenarios is not defined the routine uses all farmR projects which
@@ -57,7 +57,20 @@ prepare_management_scenario_inputs <- function(project_path, status_quo,
     farmr_names <- str_remove(scenarios, '.farm$')
   }
 
-  scen_files <- list()
+  # Load the scenario farmR projects into a list
+  farm_scen <- map(farmr_names, ~ read_farmr(paste(project_path,
+                                                   paste0(.x, '.farm'),
+                                                   sep = '/'))) %>%
+    set_names(farmr_names)
+
+  # Load the farmR project for the status quo
+  farm_squo <- read_farmr(paste(project_path,
+                                paste0(status_quo, '.farm'),
+                                sep = '/'))
+
+  # Compare properties such as the start/end years or number of HRUs
+  # to have minor checks if the projects are for the same SWAT+ project.
+  compare_scen_quo_properties(farm_scen, farm_squo)
 
   # For all scenarios the following workflow is executed:
   # - load each found farmR project
@@ -71,22 +84,23 @@ prepare_management_scenario_inputs <- function(project_path, status_quo,
   # - The input tables hru-data, landuse.lum, management.sch, and plant.ini
   #   are read from the project folder and saved in a list object.
   #
-  for (i in 1:length(farmr_names)) {
-    cat('Preparing and loading input files for scenario', farmr_names[i], ':\n')
-    farm_scen <- read_farmr(paste(project_path,
-                                  paste0(farmr_names[i], '.farm'),
-                                  sep = '/'))
+  scen_files <- list()
+
+  for (scen_i in farmr_names) {
+    cat('Preparing and loading input files for scenario', scen_i, ':\n')
 
     if(xor(is.null(start_year), is.null(end_year))) {
       stop("Either both 'start_year' and 'end_year' are defined or both are NULL.")
     }
 
-    if(is.null(start_year) & i == 1) {
-      start_year <- farm_scen$.data$scheduled_operations$scheduled_years$start_year
-      end_year <- farm_scen$.data$scheduled_operations$scheduled_years$end_year
+    if(is.null(start_year)) {
+      start_year <- farm_scen[[scen_i]]$.data$scheduled_operations$scheduled_years$start_year
+      end_year <- farm_scen[[scen_i]]$.data$scheduled_operations$scheduled_years$end_year
     }
 
-    write_farmr_ops(farm_scen, start_year = start_year, end_year = end_year)
+    write_farmr_ops(farm_scen[[scen_i]],
+    start_year = start_year,
+    end_year = end_year)
 
     update_landuse_labels(project_path)
 
@@ -105,10 +119,10 @@ prepare_management_scenario_inputs <- function(project_path, status_quo,
                                             'yrs_init', 'rsd_init'),
                               id_num    =  c(2:3, 6:11))
 
-    scen_files[[farmr_names[i]]] <- list(hru_data = hru_data_scen,
-                                         luse_lum = luse_lum_scen,
-                                         mgt_sch  = mgt_sch_scen,
-                                         plt_ini  = plt_ini_scen)
+    scen_files[[scen_i]] <- list(hru_data.hru    = hru_data_scen,
+                                 landuse.lum     = luse_lum_scen,
+                                 management.sch  = mgt_sch_scen,
+                                 plant.ini       = plt_ini_scen)
     cat('\n')
   }
 
@@ -121,9 +135,6 @@ prepare_management_scenario_inputs <- function(project_path, status_quo,
   # the operations which are prepared for the scenarios.
   #
   cat('Preparing and loading input files for status quo:\n')
-  farm_squo <- read_farmr(paste(project_path,
-                          paste0(status_quo, '.farm'),
-                          sep = '/'))
 
   write_farmr_ops(farm_squo, start_year = start_year, end_year = end_year)
 
@@ -145,24 +156,28 @@ prepare_management_scenario_inputs <- function(project_path, status_quo,
                             id_num    =  c(2:3, 6:11))
   cat('\n')
 
+  # -------------------------------------------------------------------------
+  # Excluded this check again as the land use labels can be different and
+  # all matching labels must not necessarily be a requirement.
   # Check if mgt definitions are missing in scenarios -----------------------
   #
   # All scenario are checked if they miss any lu_mgt labels in hru-data
   # which are provided in the status quo.
   # If all farmR projects were set up correctly the landuse labels in all
   # projects should be identical.
-  mgt_not_in_scen <- map(scen_files,
-                         ~ !.x$hru_data$lu_mgt %in% hru_data_squo$lu_mgt)
-  mgt_scen_miss <- map_lgl(mgt_not_in_scen, ~ any(.x))
-
-  if (any(mgt_scen_miss)) {
-    mgts_miss <- map2(scen_files, mgt_not_in_scen,
-                      ~ .x$hru_data$lu_mgt[.y]) %>%
-      map_chr(., ~ paste(.x, collapse = ', '))
-    mgts_miss <- mgts_miss[mgt_scen_miss]
-    msg <- map2_chr(names(mgts_miss), mgts_miss, ~ paste0(.x, ': ', .y, '\n' ))
-    stop('The following lu_mgt entries are missing in the scenarios:\n', msg)
-  }
+  # mgt_not_in_scen <- map(scen_files,
+  #                        ~ !.x$hru_data$lu_mgt %in% hru_data_squo$lu_mgt)
+  # mgt_scen_miss <- map_lgl(mgt_not_in_scen, ~ any(.x))
+  #
+  # if (any(mgt_scen_miss)) {
+  #   mgts_miss <- map2(scen_files, mgt_not_in_scen,
+  #                     ~ .x$hru_data$lu_mgt[.y]) %>%
+  #     map_chr(., ~ paste(.x, collapse = ', '))
+  #   mgts_miss <- mgts_miss[mgt_scen_miss]
+  #   msg <- map2_chr(names(mgts_miss), mgts_miss, ~ paste0(.x, ': ', .y, '\n' ))
+  #   stop('The following lu_mgt entries are missing in the scenarios:\n', msg)
+  # }
+  # -------------------------------------------------------------------------
 
   # Date update routine -----------------------------------------------------
   #
@@ -176,53 +191,77 @@ prepare_management_scenario_inputs <- function(project_path, status_quo,
   # still be considered as the same operation, synonyms can be defined with
   # the synonyms input table.
   #
+
   names_squo <- factor(mgt_sch_squo$name)
   schedule_squo <- split(mgt_sch_squo, names_squo)
+  hru_lum_squo  <- select(hru_data_squo, id, lu_mgt)
 
   for (scen_i in names(scen_files)) {
     cat('Updating schedule dates for scenario', scen_i, ':\n' )
-    names_scen <- factor(scen_files[[scen_i]]$mgt_sch$name)
-    schedule_scen <- split(scen_files[[scen_i]]$mgt_sch, names_scen)
+    names_scen <- factor(scen_files[[scen_i]]$management.sch$name)
+    schedule_scen <- split(scen_files[[scen_i]]$management.sch, names_scen)
+
+    hru_lum <- scen_files[[scen_i]]$hru_data.hru %>%
+      select(., id, lu_mgt) %>%
+      left_join(., hru_lum_squo, by = 'id', suffix = c("_scn", "_quo")) %>%
+      distinct(., lu_mgt_scn, .keep_all = T)
 
     t0 <- now()
     cnt <- 1
-    for (i in names(schedule_squo)) {
-      sch_quo <- add_op_date(schedule_squo[[i]], start_year)
-      sch_scn <- add_op_date(schedule_scen[[i]], start_year)
+    for (i in 1:nrow(hru_lum)) {
+      lum_squo_i <- hru_lum$lu_mgt_quo[i]
+      lum_scen_i <- hru_lum$lu_mgt_scn[i]
+      mgt_squo_i <- luse_lum_squo$mgt[luse_lum_scen$name == lum_squo_i]
+      mgt_scen_i <- scen_files[[scen_i]]$landuse.lum$mgt[
+        scen_files[[scen_i]]$landuse.lum$name == lum_squo_i]
 
-      if (!is.null(sch_scn)) {
-        if (nrow(sch_scn) > 0) {
-          date_i_upd <- update_dates(sch_quo, sch_scn, syn, 21, i)
-          sch_scn$date <- date_i_upd
-          schedule_scen[[i]] <- date_to_monday(sch_scn)
+      if(all(mgt_squo_i != 'null') & all(mgt_scen_i != 'null')) {
+        sch_squo <- add_op_date(schedule_squo[[mgt_squo_i]], start_year)
+        sch_scen <- add_op_date(schedule_scen[[mgt_scen_i]], start_year)
+
+        if (!is.null(sch_scen)) {
+          if (nrow(sch_scen) > 0) {
+            date_i_upd <- update_dates(sch_squo, sch_scen, mgt_scen_i, synonyms, 21)
+            sch_scen$date <- date_i_upd
+            schedule_scen[[mgt_scen_i]] <- date_to_monday(sch_scen)
+          }
         }
       }
-      display_progress_pct(cnt, length(schedule_squo), t0, 'Updating schedule dates:')
+      display_progress_pct(cnt, nrow(hru_lum), t0, 'Updating schedule dates:')
       cnt <- cnt + 1
     }
     finish_progress(length(schedule_squo), t0, 'Updated', 'schedule')
-    scen_files[[scen_i]]$mgt_sch <- bind_rows(schedule_scen)
+    scen_files[[scen_i]]$management.sch <- bind_rows(schedule_scen)
 
     cat('\n')
   }
-  time_stamp <- format(Sys.time(), "%Y%m%d_%H%M")
 
-  cat("Writing 'mgt_scenarios.rds' to", write_path)
+  scen_files$status_quo <- list(hru_data.hru    = hru_data_squo,
+                                landuse.lum     = luse_lum_squo,
+                                management.sch  = mgt_sch_squo,
+                                plant.ini       = plt_ini_squo)
+
+
+  time_stamp <- format(Sys.time(), "%Y%m%d_%H%M")
+  write_name <- paste0(time_stamp, '_mgt_scenarios')
+
+  cat("Writing", paste0("'", write_name, '.rds', "'"), " to", write_path)
+
   if(!dir.exists(write_path)) {
     dir.create(write_path, recursive = TRUE)
   }
-  write_rds(scen_files, paste0(project_path, '/', time_stamp, '_mgt_scenarios.rds'))
+  write_rds(scen_files,
+            paste0(write_path, '/', write_name, '.rds'))
 
   if (write_csv_mgts) {
 
-    mgt_csv_path <- paste0(write_path, '/', time_stamp, '_management_scenarios')
+    mgt_csv_path <- paste0(write_path, '/', write_name)
     dir.create(mgt_csv_path, recursive = TRUE)
 
     cat("Writing management '.csv' tables to", mgt_csv_path)
-    write_csv(mgt_sch_squo, paste0(mgt_csv_path, '/status_quo.csv'))
 
     for (scen_i in names(scen_files)) {
-      write_csv(scen_files[[scen_i]]$mgt_sch,
+      write_csv(scen_files[[scen_i]]$management.sch,
                 paste0(mgt_csv_path, '/', scen_i, '.csv'))
     }
   }
@@ -330,7 +369,8 @@ update_dates <- function(sch_quo, sch_scn, sch_name,
   return(dates_upd)
 }
 
-#' Title
+#' Add date column to operations table based on start_year and day and month
+#' columns.
 #'
 #' @param tbl Operation schedule table
 #' @param start_year Start year for the operation schedule
@@ -440,4 +480,57 @@ write_farmr_ops <- function(farmr_project, start_year, end_year) {
                               end_year = end_year,
                               year_range = farmr_project$.data$scheduled_operations$scheduled_years,
                               version = farmr_project$.data$meta$swat_version)
+}
+
+
+#' Compare start/end years and numbers of HRUs for all scenarios with the status
+#' quo.
+#'
+#' @param farmr_scen List of scenario farmR projects.
+#' @param farmr_quo farmR project for the status quo case.
+#'
+#' @returns Triggeres errors if differences are identified.
+#'
+#' @importFrom dplyr bind_rows mutate %>%
+#' @importFrom purrr map map2
+#'
+#' @keywords internal
+#'
+compare_scen_quo_properties <- function(farm_scen, farm_squo) {
+  scen_years <- map(farm_scen,
+                    ~ .x$.data$scheduled_operations$scheduled_years) %>%
+    map2(., names(.), ~ mutate(.x, farmr = .y, .before = 1))
+
+  n_hru_squo <- nrow(farm_squo$.data$scheduled_operations$assigned_hrus)
+  n_hru_scen <- map_int(farm_scen,
+                        ~ nrow(.x$.data$scheduled_operations$assigned_hrus))
+
+  if(any(n_hru_scen != n_hru_squo)) {
+    hru_diff <- names(n_hru_scen)[n_hru_scen != n_hru_squo]
+    stop('The following scenarios have a different number of HRUs compared to ',
+         'the status quo:\n', paste(hru_diff, collapse = ', '))
+  }
+
+  squo_years <- farm_squo$.data$scheduled_operations$scheduled_years
+  years_diff <- bind_rows(scen_years)$start_year != squo_years$start_year |
+                bind_rows(scen_years)$end_year   != squo_years$end_year
+
+  if(any(years_diff)) {
+    scen_years <- scen_years[years_diff]
+    fmt_name <- paste0('%-', max(10, nchar(scen_years$farmr)) + 2, 's')
+    fmt_vals <- '%12s'
+    head_msg <- paste0("The following differences in 'start_year' and ",
+                       "'end_year \nbetween the satus quo and the scenarios ",
+                       "were identified:\n\n",
+                       sprintf(fmt_name, ''), sprintf(fmt_vals, 'start_year'),
+                       sprintf(fmt_vals, 'end_year'), '\n')
+    quo_msg <- paste0(sprintf(fmt_name,'status_quo'),
+                      sprintf(fmt_vals, squo_years$start_year),
+                      sprintf(fmt_vals, squo_years$end_year), '\n\n')
+    scn_msg <- map_chr(scen_years, ~ paste0(sprintf(fmt_name, .x$farmr),
+                                            sprintf(fmt_vals, .x$start_year),
+                                            sprintf(fmt_vals, .x$end_year)))
+    bot_msg <- '\n\nAll farmR projects must cover the same time interval.'
+    stop(head_msg, quo_msg, scn_msg, bot_msg)
+  }
 }

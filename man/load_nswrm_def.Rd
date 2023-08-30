@@ -38,6 +38,12 @@ change. The lookup table can include the settings for the NSWRM codes
 , and \strong{afforest}. The \code{land_use} table must provide the columns
 \code{type}, \code{lum_plnt}, \code{lum_mgt}, \code{lum_cn2}, \code{lum_cpr}, and
 \code{lum_ovn}.
+\item \code{'management'}: The management definition is an \verb{*.rds} object which
+must be prepared with the function
+\code{prepare_management_scenario_inputs()}. The function uses the
+\code{SWATfarmR} projects which are located in the \code{project_path} and
+generates the file \code{'mgt_scenarios.rds'} which is the required input
+to define management related NSWRMs.
 \item \code{'pond'}: A pond definition table includes all definitions for pond
 locations. The \code{pond} table must provide the columns \code{name},
 \code{to_cha_id}, and \code{from_cha_id}.

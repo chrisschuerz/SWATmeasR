@@ -2,7 +2,8 @@
 % Please edit documentation in R/prepare_management.R
 \name{add_op_date}
 \alias{add_op_date}
-\title{Title}
+\title{Add date column to operations table based on start_year and day and month
+columns.}
 \usage{
 add_op_date(tbl, start_year)
 }
@@ -15,6 +16,7 @@ add_op_date(tbl, start_year)
 The table with an added date column
 }
 \description{
-Title
+Add date column to operations table based on start_year and day and month
+columns.
 }
 \keyword{internal}
