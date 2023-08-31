@@ -27,6 +27,11 @@ update_management <- function(swat_inputs, hru_id, mgt_def) {
                                           mgt_add)
   swat_inputs$plant.ini <- bind_rows(swat_inputs$plant.ini, ini_add)
 
+  # Set the input files which are adjusted by management related changes
+  # so that they will be written when writing output files.
+  swat_inputs$file_updated[c('hru_data.hru', 'landuse.lum', 'management.sch',
+                             'plant.ini')] <- TRUE
+
   return(swat_inputs)
 }
 

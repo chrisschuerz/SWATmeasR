@@ -39,12 +39,17 @@
 #' @keywords internal
 #'
 replace_by_ponds <- function(swat_inputs, hru_id, to_cha_id, from_cha_id = NULL) {
+  # Check if an HRU was already replaced by a pond
   is_pond <- check_arguments_pond(swat_inputs, hru_id, to_cha_id, from_cha_id)
+  # Exclude that HRUs/channels from the ones which will be replaced/modified/
   hru_id    <- hru_id[!is_pond]
   to_cha_id <- to_cha_id[!is_pond]
   if(is.list(from_cha_id)) {
     from_cha_id   <- from_cha_id[!is_pond]
   }
+
+  # If there are HRUs remaining which can be replaced by ponds loop over all
+  # land objects and update the respective input files.
   if(length(hru_id) > 0) {
     rtu_con_chg <- get_chg_ids_pond(swat_inputs$rout_unit.con, hru_id)
 
@@ -79,6 +84,8 @@ replace_by_ponds <- function(swat_inputs, hru_id, to_cha_id, from_cha_id = NULL)
                                                      from_cha_i,
                                                      res_id)
     }
+    # Set the input files which are adjusted by pond replacement to 'modified'
+    # so that they will be written when writing output files.
     swat_inputs$file_updated[c('object.cnt', 'reservoir.res', 'reservoir.con',
                                'hydrology.res', 'rout_unit.con', 'hru.con',
                                'chandeg.con')] <- TRUE
@@ -338,6 +345,8 @@ update_res_res_pond <- function(res_res, hru_id) {
 #' @keywords internal
 #'
 update_hyd_res_pond <- function(hyd_res, hru_id, area) {
+  # The implemented parameters are still default paremters. In a future version
+  # the parameters should be input by the user via the pond definition file.
   hyd_add <- tibble(name = paste0('pnd', hru_id),
                     yr_op = 1,
                     mon_op = 1,

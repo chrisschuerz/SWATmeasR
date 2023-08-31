@@ -17,22 +17,27 @@
 #' @keywords internal
 #'
 load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
+  # Check if any input files were already updated. In this case it is not
+  # allowed to reload a location file
   if(any(swat_inputs$file_updated)) {
     stop('Cannot load/update NSWRM definition tables when measures \n',
          'were already implemented in the SWAT+ project.\n',
          'If you want to load NSWRM definition tables in this project,\n',
          'you have to reset the project first with measr_project$reset().')
   }
+  # Overwrite must be set to allow a rewrite
   if ('nswrm_locations' %in% names(nswrm_defs) & !overwrite) {
     stop("An NSWRM location table already exists for this project.\n",
          "If the existing table should be overwritten set ",
          "'overwrite = TRUE'.")
   }
 
+  # Load the csv input file
   nswrm_loc <- read_csv(file_path, lazy = FALSE,
                       col_types = cols(id = 'i', .default = 'c' ),
                       na = c('', 'NA'))
 
+  # Check the column names. The names below must be in the table.
   col_names <- c('id', 'nswrm', 'obj_id')
   col_miss <- ! col_names %in%  names(nswrm_loc)
   if(any(col_miss)) {
@@ -40,9 +45,14 @@ load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
         col_names[col_miss])
   }
 
+  # Add a column which defines the type of NSWRM, such as 'management',
+  # 'land_use', 'pond', ...
   nswrm_loc <- nswrm_loc %>%
     left_join(., nswrm_defs$nswrm_lookup, by = "nswrm")
 
+  # All NSWRMs for which locations will be defined, definitions must have been
+  # loaded before with load_nswrm_definition(). An error is triggered if
+  # definitions are still missing.
   nswrm_defs_miss <- unique(nswrm_loc$nswrm[is.na(nswrm_loc$type)])
 
   if(length(nswrm_defs_miss) > 0) {
@@ -289,12 +299,20 @@ load_luse_def <- function(file_path, swat_inputs) {
 #' @keywords internal
 #'
 load_mgt_def <- function(file_path, swat_inputs) {
+  # Load the .rds management input file which was generated with
+  # prepare_management_scenario_inputs()
   mgt_def <- read_rds(file_path)
 
+  # Check if the land use labels in the SWAT+ project and the status quo
+  # that is saved in the rds file are the same.
   if(any(swat_inputs$hru_data.hru$lu_mgt != mgt_def$status_quo$hru_data$lu_mgt)) {
     stop("The 'lu_mgt' for the status quo case in the management definition \n",
          "does not match the 'lu_mgt' labels of hru-data.hru of the SWAT+ project.")
   }
+
+  # Check if the numbers of operations for all defined managements match
+  # between the SWAT+ project and the rds file. This can indicate that
+  # the number of years which were written differ.
   n_op_mgt <- distinct(swat_inputs$management.sch, name, numb_ops) %>%
     set_names(c('name', 'numb_ops_mgt'))
   n_op_quo <- distinct(mgt_def$status_quo$management.sch, name, numb_ops) %>%
@@ -308,6 +326,9 @@ load_mgt_def <- function(file_path, swat_inputs) {
          "does not match the number operations defined in the SWAT+ project.\n")
   }
 
+  # Check if the operation sequence in one of the selected managements
+  # match between SWAT+ project and the rds file. Otherwise this can indicate
+  # that different years are written in the project and the scenario input file.
   n_op_max <- filter(n_op_quo, numb_ops == max(numb_ops))[1,]
 
   mgt_op_max  <- filter(swat_inputs$management.sch, name == n_op_max$name)
@@ -321,6 +342,10 @@ load_mgt_def <- function(file_path, swat_inputs) {
          "do not match the operations defined in the SWAT+ project.\n")
   }
 
+  # To indicate that labels/managements/plant.ini in the SWAT+ input files
+  # were replaced by one of the scenario inputs the suffixes (lum, mgt, com)
+  # are replaced by three character suffixes which are the first 3 letters of
+  # the scenario label.
   short_labels <- get_mgt_short_labels(names(mgt_def))
 
   for (scen_i in names(mgt_def)) {
@@ -384,7 +409,6 @@ load_pond_def <- function(file_path, swat_inputs) {
   is_no_cha_to_id <- ! pond_def$cha_to_id %in% swat_inputs$chandeg.con$id
   is_no_cha_fr_id <- map_lgl(pond_def$cha_from_id,
                        ~ !all(is.na(.x) | .x %in% swat_inputs$chandeg.con$id))
-  # hru_def_miss <-
 
   if (any(c(hru_id_na, cha_id_na, is_no_hru_id,
             is_no_cha_to_id, is_no_cha_fr_id))) {
