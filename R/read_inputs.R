@@ -5,7 +5,7 @@
 #'
 #' @returns A list object with the SWAT+ input files organized in tibbles.
 #'
-#' @export
+#' @keywords internal
 #'
 read_swat_inputs <- function(project_path) {
   input_list <- list(

@@ -9,7 +9,7 @@
 #'
 #' @returns Writes SWAT+ text input files into the `project_path`.
 #'
-#' @export
+#' @keywords internal
 #'
 write_swat_inputs <- function(swat_inputs, file_updated, project_path) {
   if(file_updated['object.cnt']) {

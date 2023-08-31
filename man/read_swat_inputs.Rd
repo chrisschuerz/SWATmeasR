@@ -16,3 +16,4 @@ A list object with the SWAT+ input files organized in tibbles.
 \description{
 Read SWAT+ input files and arrange them in a list object
 }
+\keyword{internal}

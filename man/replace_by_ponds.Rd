@@ -46,3 +46,4 @@ route water to the new reservoirs. The new reservoirs must route water to one
 channel each defined with \code{to_cha_id}. Optionally a \code{from_cha_id} can be
 defined if channels should be rerouted into the new reservoir.
 }
+\keyword{internal}

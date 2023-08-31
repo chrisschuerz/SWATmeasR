@@ -36,7 +36,7 @@
 #' @returns The `swat_inputs` list with updated input tables which include all
 #'   necessary changes to replace land objects by ponds.
 #'
-#' @export
+#' @keywords internal
 #'
 replace_by_ponds <- function(swat_inputs, hru_id, to_cha_id, from_cha_id = NULL) {
   is_pond <- check_arguments_pond(swat_inputs, hru_id, to_cha_id, from_cha_id)
