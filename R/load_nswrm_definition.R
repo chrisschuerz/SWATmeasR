@@ -324,31 +324,30 @@ load_mgt_def <- function(file_path, swat_inputs) {
   short_labels <- get_mgt_short_labels(names(mgt_def))
 
   for (scen_i in names(mgt_def)) {
-    scen_i <- names(mgt_def)[1]
     mgt_def[[scen_i]]$hru_data.hru$lu_mgt <-
-      mgt_def[[scen_i]]$hru_data.hru$lu_mgt %>%
-      str_remove(., 'lum$') %>%
-      paste0(., short_labels[scen_i])
+      str_replace(mgt_def[[scen_i]]$hru_data.hru$lu_mgt,
+                  'lum$', short_labels[scen_i]) %>%
+      str_replace(., paste0('null', short_labels[scen_i]), 'null')
     mgt_def[[scen_i]]$landuse.lum$name <-
-      mgt_def[[scen_i]]$landuse.lum$name %>%
-      str_remove(., 'lum$') %>%
-      paste0(., short_labels[scen_i])
+      str_replace(mgt_def[[scen_i]]$landuse.lum$name,
+                  'lum$', short_labels[scen_i]) %>%
+        str_replace(., paste0('null', short_labels[scen_i]), 'null')
     mgt_def[[scen_i]]$landuse.lum$plnt_com <-
-      mgt_def[[scen_i]]$landuse.lum$plnt_com %>%
-      str_remove(., 'com$') %>%
-      paste0(., short_labels[scen_i])
+      str_replace(mgt_def[[scen_i]]$landuse.lum$plnt_com,
+                  'com$', short_labels[scen_i]) %>%
+        str_replace(., paste0('null', short_labels[scen_i]), 'null')
     mgt_def[[scen_i]]$landuse.lum$mgt <-
-      mgt_def[[scen_i]]$landuse.lum$mgt %>%
-      str_remove(., 'mgt$') %>%
-      paste0(., short_labels[scen_i])
+      str_replace(mgt_def[[scen_i]]$landuse.lum$mgt,
+                  'mgt$', short_labels[scen_i]) %>%
+        str_replace(., paste0('null', short_labels[scen_i]), 'null')
     mgt_def[[scen_i]]$management.sch$name <-
-      mgt_def[[scen_i]]$management.sch$name %>%
-      str_remove(., 'mgt$') %>%
-      paste0(., short_labels[scen_i])
+      str_replace(mgt_def[[scen_i]]$management.sch$name,
+                  'mgt$', short_labels[scen_i]) %>%
+        str_replace(., paste0('null', short_labels[scen_i]), 'null')
     mgt_def[[scen_i]]$plant.ini$pcom_name <-
-      mgt_def[[scen_i]]$plant.ini$pcom_name %>%
-      str_remove(., 'com$') %>%
-      paste0(., short_labels[scen_i])
+      str_replace(mgt_def[[scen_i]]$plant.ini$pcom_name,
+                  'com$', short_labels[scen_i]) %>%
+        str_replace(., paste0('null', short_labels[scen_i]), 'null')
   }
 
   return(mgt_def)
