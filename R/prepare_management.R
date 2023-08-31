@@ -22,7 +22,7 @@
 #'
 #' @importFrom dplyr bind_rows distinct left_join select %>%
 #' @importFrom purrr map map_chr map_lgl map2
-#' @importFrom readr read_csv write_csv write_rds
+#' @importFrom readr read_csv write_csv
 #' @importFrom stringr str_remove
 #'
 #' @export
@@ -250,8 +250,7 @@ prepare_management_scenario_inputs <- function(project_path, status_quo,
   if(!dir.exists(write_path)) {
     dir.create(write_path, recursive = TRUE)
   }
-  write_rds(scen_files,
-            paste0(write_path, '/', write_name, '.rds'))
+  saveRDS(scen_files, paste0(write_path, '/', write_name, '.rds'))
 
   if (write_csv_mgts) {
 
