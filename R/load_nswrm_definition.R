@@ -321,6 +321,36 @@ load_mgt_def <- function(file_path, swat_inputs) {
          "do not match the operations defined in the SWAT+ project.\n")
   }
 
+  short_labels <- get_mgt_short_labels(names(mgt_def))
+
+  for (scen_i in names(mgt_def)) {
+    scen_i <- names(mgt_def)[1]
+    mgt_def[[scen_i]]$hru_data.hru$lu_mgt <-
+      mgt_def[[scen_i]]$hru_data.hru$lu_mgt %>%
+      str_remove(., 'lum$') %>%
+      paste0(., short_labels[scen_i])
+    mgt_def[[scen_i]]$landuse.lum$name <-
+      mgt_def[[scen_i]]$landuse.lum$name %>%
+      str_remove(., 'lum$') %>%
+      paste0(., short_labels[scen_i])
+    mgt_def[[scen_i]]$landuse.lum$plnt_com <-
+      mgt_def[[scen_i]]$landuse.lum$plnt_com %>%
+      str_remove(., 'com$') %>%
+      paste0(., short_labels[scen_i])
+    mgt_def[[scen_i]]$landuse.lum$mgt <-
+      mgt_def[[scen_i]]$landuse.lum$mgt %>%
+      str_remove(., 'mgt$') %>%
+      paste0(., short_labels[scen_i])
+    mgt_def[[scen_i]]$management.sch$name <-
+      mgt_def[[scen_i]]$management.sch$name %>%
+      str_remove(., 'mgt$') %>%
+      paste0(., short_labels[scen_i])
+    mgt_def[[scen_i]]$plant.ini$pcom_name <-
+      mgt_def[[scen_i]]$plant.ini$pcom_name %>%
+      str_remove(., 'com$') %>%
+      paste0(., short_labels[scen_i])
+  }
+
   return(mgt_def)
 }
 
@@ -432,4 +462,37 @@ update_nswrm_lookup <- function(nswrm_lookup, type, nswrm, overwrite) {
                           nswrm = nswrm)
 
   return(nswrm_lookup)
+}
+
+#' Derive short labels for the management names to be used as suffixes in the
+#' management definition files.
+#'
+#' @param mgt_lables Vector with management scenario names.
+#'
+#' @returns A vector with short labels with 3 characters.
+#'
+#' @importFrom purrr map map_chr
+#' @importFrom stringr str_sub str_split
+#'
+#' @keywords internal
+#'
+get_mgt_short_labels <- function(mgt_labels) {
+  lbl_sub  <- str_sub(mgt_labels, 1, 3)
+  lbl_cnt  <- table(lbl_sub)
+  lbl_dupl <- which(lbl_cnt > 1)
+  has_dupl <- length(lbl_dupl) > 0
+
+  while(has_dupl) {
+    lbl_new <- str_split(lbl[lbl_sub %in% names(lbl_dupl)], '') %>%
+      map(., ~ .x[c(1,2, round(runif(1, 1, length(.x))))]) %>%
+      map_chr(., ~ paste(.x, collapse = ''))
+    lbl_sub[lbl_sub %in% names(lbl_dupl)] <- lbl_new
+    lbl_cnt  <- table(lbl_sub)
+    lbl_dupl <- which(lbl_cnt > 1)
+    has_dupl <- length(lbl_dupl) > 0
+  }
+
+  names(lbl_sub) <- mgt_labels
+
+  return(lbl_sub)
 }
