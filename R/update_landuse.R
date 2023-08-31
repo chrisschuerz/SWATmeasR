@@ -43,7 +43,7 @@
 #' @importFrom tibble add_row
 #' @importFrom tidyr replace_na
 #'
-#' @export
+#' @keywords internal
 #'
 update_landuse <- function(swat_inputs, hru_id, nswrm,
                            lum_plnt = NULL, lum_mgt = NULL, lum_cn2  = NULL,

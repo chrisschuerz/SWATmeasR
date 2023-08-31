@@ -62,3 +62,4 @@ exists, this landuse is assigned to the HRUs. If not a new one is added with
 the defined parameters (\code{lum_plnt}, \code{lum_mgt}, \code{lum_cn2}, \code{lum_cpr}, and
 \code{lum_ovn}).
 }
+\keyword{internal}

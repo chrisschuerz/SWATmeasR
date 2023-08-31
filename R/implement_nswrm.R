@@ -16,9 +16,31 @@
 #' @keywords internal
 #'
 implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs, overwrite) {
+  # Check if NSWRM locations were already loaded into the measr_project.
+  if(!'nswrm_locations' %in% names(nswrm_defs)) {
+    stop("The NSWRM locations must be loaded before you can implement them ",
+         "in the SWAT+ model setup.\n",
+         "Use 'measr_project$load_nswrm_location()' to load the locations file.")
+  }
 
   # Filter all NSWRM locations with the IDs = nswrm_id
   nswrm_loc_sel <- filter(nswrm_defs$nswrm_locations, id %in% nswrm_id)
+
+  # Implement NSWRMs of type 'management'------------------------------------
+  # The vector includes all NSWRM types which are represented by a change in
+  # management practices.
+  nswrm_management <- unique(nswrm_loc_sel$nswrm[nswrm_loc_sel$type == 'management'])
+
+  # Loop over all management types to perform the land use changes in the SWAT+
+  # input tables.
+  for (nswrm_i in nswrm_management) {
+    hru_id <- unique(unlist(nswrm_loc_sel$obj_id[nswrm_loc_sel$nswrm == nswrm_i]))
+    def_nswrm <- nswrm_defs$management[[nswrm_i]]
+    swat_inputs <- update_management(swat_inputs,
+                                     hru_id  = hru_id,
+                                     mgt_def = def_nswrm)
+  }
+  # -------------------------------------------------------------------------
 
   # Implement NSWRMs of type 'land_use' change ------------------------------
   # The vector includes all NSWRM types which are represented by a land use
@@ -28,10 +50,10 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs, overwrite) {
   # Loop over all land use change types to perform the land use changes in the
   # SWAT+ input tables.
   for (nswrm_i in nswrm_land_use) {
-    id_nswrm  <- nswrm_loc_sel$id[nswrm_loc_sel$nswrm == nswrm_i]
+    hru_id <- unique(unlist(nswrm_loc_sel$obj_id[nswrm_loc_sel$nswrm == nswrm_i]))
     def_nswrm <- filter(nswrm_defs$land_use, nswrm == nswrm_i)
     swat_inputs <- update_landuse(swat_inputs,
-                                  hru_id   = id_nswrm,
+                                  hru_id   = hru_id,
                                   nswrm    = def_nswrm$nswrm,
                                   lum_plnt = def_nswrm$lum_plnt,
                                   lum_mgt  = def_nswrm$lum_mgt,
