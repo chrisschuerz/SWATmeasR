@@ -153,6 +153,7 @@ update_landuse <- function(swat_inputs, hru_id, nswrm,
                    lum_plnt = lum_plnt,
                    mgt = lum_mgt,
                    cn2 = lum_cn2,
+                   cons_prac = lum_cpr,
                    ov_mann = lum_ovn) %>%
       map_df(., ~replace_na(.x, 'null'))
       swat_inputs$file_updated['landuse.lum'] <- TRUE
