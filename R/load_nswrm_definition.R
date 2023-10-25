@@ -17,6 +17,12 @@
 #' @keywords internal
 #'
 load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
+  if(is.null(nswrm_defs)) {
+    stop('No NSWRMs were defined yet. \n\n',
+         'All NSWRMs must be defined before loading their locations.\n',
+         "Please add the definitions with measr_project$load_nswrm_definition()",
+         " before you continue.")
+  }
   # Check if any input files were already updated. In this case it is not
   # allowed to reload a location file
   if(any(swat_inputs$file_updated)) {
@@ -182,7 +188,7 @@ load_nswrm_def <- function(file_path, type, nswrm_defs, swat_inputs, overwrite) 
                                                    names(nswrm_defs$management),
                                                    overwrite)
   } else if (type == 'pond') {
-    nswrm_defs$pond <- load_pond_def(file_path, swat_inputs)
+    nswrm_defs$pond <- load_water_def(file_path, swat_inputs, type = 'pond')
     nswrm_defs$nswrm_lookup <- update_nswrm_lookup(nswrm_defs$nswrm_lookup,
                                                    'pond',
                                                    'pond',
@@ -378,30 +384,90 @@ load_mgt_def <- function(file_path, swat_inputs) {
   return(mgt_def)
 }
 
-#' Load the definition input table for HRUs which will be replaced by ponds
+#' Load the definition input table for HRUs which will be replaced by ponds,
+#' or where wetlands will be added
 #'
 #' @param file_path Path to the '.csv' definition file.
 #' @param swat_inputs List with SWAT+ input files.
+#' @param type Either 'pond' or 'wetland'. Label controls different settings in
+#'   definition
 #'
-#' @returns The loaded pond definition table as a tibble.
+#' @returns The loaded pond/wetland definition table as a tibble.
 #'
-#' @importFrom dplyr mutate %>%
+#' @importFrom dplyr left_join mutate select %>%
 #' @importFrom purrr map map_lgl
 #' @importFrom readr cols read_csv
 #'
 #' @keywords internal
 #'
-load_pond_def <- function(file_path, swat_inputs) {
+load_water_def <- function(file_path, swat_inputs, type) {
   pond_def <- read_csv(file_path, lazy = FALSE,
                        col_types = cols(hru_id = 'i', cha_to_id = 'i',
-                                        .default = 'c'), na = c('', 'NA'))
-
+                                        .default = col_guess()),
+                       na = c('', 'NA'))
+  # Initialization of optional parameter columns
   if (!'cha_from_id' %in% names(pond_def)) {
     pond_def <- mutate(pond_def, cha_from_id = NA_integer_)
   } else {
     pond_def$cha_from_id <- map(pond_def$cha_from_id,
                                 ~ eval(parse(text = paste0('c(', .x, ')'))))
   }
+  if (!'area_ps' %in% names(pond_def)) {
+    pond_def <- mutate(pond_def, area_ps = NA_real_)
+  } else {
+    stopifnot(is.numeric(pond_def$area_ps))
+  }
+  if (!'vol_ps' %in% names(pond_def)) {
+    pond_def <- mutate(pond_def, vol_ps = NA_real_)
+  } else {
+    stopifnot(is.numeric(pond_def$vol_ps))
+  }
+  if (!'area_es' %in% names(pond_def)) {
+    pond_def <- mutate(pond_def, area_es = NA_real_)
+  } else {
+    stopifnot(is.numeric(pond_def$area_es))
+  }
+  if (!'vol_es' %in% names(pond_def)) {
+    pond_def <- mutate(pond_def, vol_es = NA_real_)
+  } else {
+    stopifnot(is.numeric(pond_def$vol_es))
+  }
+  if (!'k' %in% names(pond_def)) {
+    pond_def <- mutate(pond_def, k = NA_real_)
+  } else {
+    stopifnot(is.numeric(pond_def$k))
+  }
+  if (!'evap_co' %in% names(pond_def)) {
+    pond_def <- mutate(pond_def, evap_co = NA_real_)
+  } else {
+    stopifnot(is.numeric(pond_def$evap_co))
+  }
+  if (!'shp_co1' %in% names(pond_def)) {
+    pond_def <- mutate(pond_def, shp_co1 = NA_real_)
+  } else {
+    stopifnot(is.numeric(pond_def$shp_co1))
+  }
+  if (!'shp_co2' %in% names(pond_def)) {
+    pond_def <- mutate(pond_def, shp_co2 = NA_real_)
+  } else {
+    stopifnot(is.numeric(pond_def$shp_co2))
+  }
+  if (!'rel' %in% names(pond_def)) {
+    pond_def <- mutate(pond_def, rel = NA_character_)
+  }
+  if (!'sed' %in% names(pond_def)) {
+    pond_def <- mutate(pond_def, sed = NA_character_)
+  } else {
+    stopifnot(is.character(pond_def$sed))
+  }
+  if (!'nut' %in% names(pond_def)) {
+    pond_def <- mutate(pond_def, nut = NA_character_)
+  } else {
+    stopifnot(is.character(pond_def$nut))
+  }
+
+  pond_def <- select(pond_def, hru_id, cha_to_id, cha_from_id, area_ps, vol_ps,
+                     area_es, vol_es, k, evap_co, shp_co1, shp_co2, rel, sed, nut)
 
   hru_id_na <- is.na(pond_def$hru_id)
   cha_id_na <- is.na(pond_def$cha_to_id)
@@ -409,9 +475,17 @@ load_pond_def <- function(file_path, swat_inputs) {
   is_no_cha_to_id <- ! pond_def$cha_to_id %in% swat_inputs$chandeg.con$id
   is_no_cha_fr_id <- map_lgl(pond_def$cha_from_id,
                        ~ !all(is.na(.x) | .x %in% swat_inputs$chandeg.con$id))
+  is_no_rel_name  <- pond_def$rel %in% swat_inputs$res_rel.dtl_names |
+                     ! is.na(pond_def$rel)
+  is_no_sed_name  <- pond_def$sed %in% swat_inputs$sediment.res$name |
+                     ! is.na(pond_def$sed)
+  is_no_nut_name  <- pond_def$rel %in% swat_inputs$nutrients.res$name |
+                     ! is.na(pond_def$rel)
 
   if (any(c(hru_id_na, cha_id_na, is_no_hru_id,
-            is_no_cha_to_id, is_no_cha_fr_id))) {
+            is_no_cha_to_id, is_no_cha_fr_id,
+            is_no_rel_name, is_no_sed_name,
+            is_no_nut_name))) {
     if(any(hru_id_na)) {
       hru_na_msg <- paste0("Row IDs where 'hru_id' returns NA: ",
                            paste(which(hru_id_na), collapse = ', '), '\n')
@@ -445,13 +519,64 @@ load_pond_def <- function(file_path, swat_inputs) {
     } else {
       no_cha_fr_msg <- ''
     }
+    if(any(is_no_rel_name)) {
+      no_rel_name_msg <-
+        paste0("Row IDs where 'rel' is not defined in res_rel.dtl: ",
+               paste(which(is_no_rel_name), collapse = ', '), '\n')
+    } else {
+      no_rel_name_msg <- ''
+    }
+    if(any(is_no_sed_name)) {
+      no_rel_name_msg <-
+        paste0("Row IDs where 'sed' is not defined in sediment.res: ",
+               paste(which(is_no_sed_name), collapse = ', '), '\n')
+    } else {
+      no_sed_name_msg <- ''
+    }
+    if(any(is_no_nut_name)) {
+      no_nut_name_msg <-
+        paste0("Row IDs where 'nut' is not defined in nutrients.res: ",
+               paste(which(is_no_nut_name), collapse = ', '), '\n')
+    } else {
+      no_nut_name_msg <- ''
+    }
 
     stop('The following issues where identified for the rows of the pond ',
          'definition input table: \n\n',
          hru_na_msg, cha_na_msg, no_hru_msg, no_cha_to_msg, no_cha_fr_msg,
+         no_rel_name_msg, no_sed_name_msg, no_nut_name_msg,
          '\n\nPlease fix the reported issues in the .csv file and reload it.')
   }
 
+  hru_area <- select(swat_inputs$hru.con, id, area)
+  rel_dflt <- ifelse('drawdown_days' %in% swat_inputs$res_rel.dtl_names,
+                     'drawdown_days',
+                     'null')
+  type_lbl <- ifelse(type == 'pond', 'res', 'wet')
+  sed_dflt <- ifelse(paste0('sed', type_lbl, 1) %in% swat_inputs$sediment.res$name,
+                     paste0('sed', type_lbl, 1),
+                     'null')
+  nut_dflt <- ifelse(paste0('nut', type_lbl, 1) %in% swat_inputs$nutrients.res$name,
+                     paste0('nut', type_lbl, 1),
+                     'null')
+
+  # Initialize pond and wetland parameters and pointers
+  pond_def <- pond_def %>%
+    left_join(., hru_area, by = c('hru_id' = 'id')) %>%
+    mutate(area_ps = area,
+           vol_ps  = ifelse(is.na(vol_ps), 10*area_ps, vol_ps),
+           area_es = ifelse(is.na(area_es), 1.15*area_ps, area_es),
+           vol_es  = ifelse(is.na(vol_es), 10*area_es, vol_es),
+           k       = ifelse(is.na(k), 0, k),
+           evap_co = ifelse(is.na(evap_co), 0.6, evap_co),
+           shp_co1 = ifelse(is.na(shp_co1), 0, shp_co1),
+           shp_co2 = ifelse(is.na(shp_co2), 0, shp_co2),
+           rel     = ifelse(is.na(rel), rel_dflt, rel),
+           sed     = ifelse(is.na(sed), sed_dflt, sed),
+           nut     = ifelse(is.na(nut), nut_dflt, nut)
+
+           ) %>%
+    select(- area)
   return(pond_def)
 }
 

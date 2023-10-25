@@ -39,7 +39,10 @@ read_swat_inputs <- function(project_path) {
     chandeg.con       = read_con_file(paste0(project_path, '/chandeg.con')),
     reservoir.res     = read_tbl(paste0(project_path, '/reservoir.res')),
     hydrology.res     = read_tbl(paste0(project_path, '/hydrology.res')),
-    reservoir.con     = read_con_file(paste0(project_path, '/reservoir.con'))
+    reservoir.con     = read_con_file(paste0(project_path, '/reservoir.con')),
+    sediment.res      = read_tbl(paste0(project_path, '/sediment.res')),
+    nutrients.res     = read_tbl(paste0(project_path, '/nutrients.res')),
+    res_rel.dtl_names = read_dtl_names(paste0(project_path, '/res_rel.dtl'))
   )
 
   file_names <- names(input_list)
@@ -274,6 +277,34 @@ read_con_file <- function(file_path) {
 
   return(con_tbl)
 }
+
+#' Read the names of decision table definitions from a SWAT+ dtl input file.
+#'
+#' @param file_path Path of the SWAT+ input file.
+#'
+#' @returns A character vector with the names of the defined decision rule sets.
+#'
+#' @importFrom dplyr  %>%
+#' @importFrom purrr map_lgl map_chr
+#' @importFrom stringr str_detect str_split str_trim
+#'
+#' @keywords internal
+#'
+read_dtl_names <- function(file_path) {
+  dtl <- readLines(file_path) %>%
+    str_trim(.) %>%
+    str_split(., '[:space:]+')
+
+  is_dtl_def <- which(map_lgl(dtl, ~ length(.x) == 4 &
+                                str_detect(.x[2], '[:digit:]+') &
+                                str_detect(.x[3], '[:digit:]+') &
+                                str_detect(.x[4], '[:digit:]+')))
+
+  dtl_names <- map_chr(dtl[is_dtl_def], ~.x[1])
+
+  return(dtl_names)
+}
+
 
 #' Add a running ID to duplicated names
 #'
