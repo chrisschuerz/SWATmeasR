@@ -61,13 +61,13 @@ load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
   # definitions are still missing.
   nswrm_defs_miss <- unique(nswrm_loc$nswrm[is.na(nswrm_loc$type)])
 
-  if(length(nswrm_defs_miss) > 0) {
-    stop('All NSWRMs must be defined before loading the NSWRM locations. \n\n',
-         'Definitions for the following NSWRMs are still missing:\n',
-         paste(nswrm_defs_miss, collapse = ', '), '\n\n',
-         "Please add the definitions with measr_project$load_nswrm_definition()",
-         " before you continue.")
-  }
+  # if(length(nswrm_defs_miss) > 0) {
+  #   stop('All NSWRMs must be defined before loading the NSWRM locations. \n\n',
+  #        'Definitions for the following NSWRMs are still missing:\n',
+  #        paste(nswrm_defs_miss, collapse = ', '), '\n\n',
+  #        "Please add the definitions with measr_project$load_nswrm_definition()",
+  #        " before you continue.")
+  # }
 
   if(any(is.na(nswrm_loc$id))) {
     stop("The 'id's in the following rows were interpreted as NA:\n",

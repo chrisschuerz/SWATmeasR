@@ -21,8 +21,13 @@
 #'   must be the same length as `hru_id`. Each channel ID corresponds to the
 #'   respective `hru_id`.
 #'
-#' @param from_cha_id (optional) channel IDs which send water to the implemented
+#' @param from_cha_id Channel IDs which send water to the implemented
 #'   ponds.
+#'
+#' @param res_res_pnd Table with rel, sed and nut pointers for the added ponds.
+#'   ponds.
+#'
+#' @param hyd_res_pnd Table with hydrology.res parameters for the added ponds.
 #'
 #'   The input is default `NA`. Then the channel routing remains unchanged.
 #'   Multiple channels can be rerouted into a pond. If `hru_id` is a single
@@ -38,7 +43,8 @@
 #'
 #' @keywords internal
 #'
-replace_by_ponds <- function(swat_inputs, hru_id, to_cha_id, from_cha_id = NULL) {
+replace_by_ponds <- function(swat_inputs, hru_id, to_cha_id, from_cha_id,
+                             res_res_pnd, hyd_res_pnd) {
   # Check if an HRU was already replaced by a pond
   is_pond <- check_arguments_pond(swat_inputs, hru_id, to_cha_id, from_cha_id)
   # Exclude that HRUs/channels from the ones which will be replaced/modified/
@@ -57,12 +63,13 @@ replace_by_ponds <- function(swat_inputs, hru_id, to_cha_id, from_cha_id = NULL)
       hru_i <- hru_id[i]
       to_cha_i <- to_cha_id[i]
       from_cha_i <- unlist(from_cha_id[i])
-      area_i <-
-        swat_inputs$rout_unit.con[swat_inputs$rout_unit.con$id == hru_i,]$area
+      res_res_pnd_i <- res_res_pnd[i, ]
+      hyd_res_pnd_i <- hyd_res_pnd[i, ]
 
       swat_inputs$object.cnt <- update_obj_cnt_pond(swat_inputs$object.cnt)
 
       swat_inputs$reservoir.res <- update_res_res_pond(swat_inputs$reservoir.res,
+                                                       res_res_pnd_i,
                                                        hru_i)
       res_id <- swat_inputs$reservoir.res$id[nrow(swat_inputs$reservoir.res)]
       swat_inputs$reservoir.con <- update_res_con_pond(swat_inputs$reservoir.con,
@@ -71,6 +78,7 @@ replace_by_ponds <- function(swat_inputs, hru_id, to_cha_id, from_cha_id = NULL)
                                                        to_cha_i,
                                                        res_id)
       swat_inputs$hydrology.res <- update_hyd_res_pond(swat_inputs$hydrology.res,
+                                                       hyd_res_pnd_i,
                                                        hru_i,
                                                        area_i)
 
@@ -308,19 +316,23 @@ update_res_con_pond <- function(res_con, rtu_con, hru_id, to_cha_id, res_id) {
 #' reservoirs).
 #'
 #' @param res_res reservoir.res input table
+#' @param res_res_pnd table with rel, sed, and nut pointers for added pond.
 #' @param hru_id  ID of the HRU which is replaced by a pond.
 #'
 #' @returns Updated reservoir.res input table.
 #'
-#' @importFrom dplyr bind_rows mutate %>%
+#' @importFrom dplyr bind_cols bind_rows %>%
+#' @importFrom tibble tibble
 #'
 #' @keywords internal
 #'
-update_res_res_pond <- function(res_res, hru_id) {
-  res_add <- res_res[nrow(res_res), ] %>%
-    mutate(id = id + 1,
-           name = paste0('pnd', hru_id),
-           hyd  = name)
+update_res_res_pond <- function(res_res, res_res_pnd, hru_id) {
+  res_add <- tibble(id = max(res_res$id) + 1,
+                    name = paste0('pnd', hru_id),
+                    init = 'initres1',
+                    hyd  = name) %>%
+    bind_cols(., res_res_pnd)
+
   res_res <- bind_rows(res_res, res_add)
 
   return(res_res)
@@ -334,30 +346,25 @@ update_res_res_pond <- function(res_res, hru_id) {
 #' the replaced land object.
 #'
 #' @param hyd_res hydrology.res input table.
+#' @param hyd_res_pnd hydrology.res parameters table for added pond.
 #' @param hru_id  ID of the HRU which is replaced by a pond.
 #' @param area Area of the replaced land object in ha.
 #'
 #' @returns Updated hydrology.res input table.
 #'
-#' @importFrom dplyr bind_rows
+#' @importFrom dplyr bind_cols bind_rows
 #' @importFrom tibble tibble
 #'
 #' @keywords internal
 #'
-update_hyd_res_pond <- function(hyd_res, hru_id, area) {
+update_hyd_res_pond <- function(hyd_res, hyd_res_pnd, hru_id, area) {
   # The implemented parameters are still default paremters. In a future version
   # the parameters should be input by the user via the pond definition file.
   hyd_add <- tibble(name = paste0('pnd', hru_id),
                     yr_op = 1,
-                    mon_op = 1,
-                    area_ps = area,
-                    vol_ps = 10* area_ps,
-                    area_es = 1.15* area_ps,
-                    vol_es = 1.15*vol_ps,
-                    k = 0,
-                    evap_co = 0.6,
-                    shp_co1 = 0,
-                    shp_co2 = 0)
+                    mon_op = 1) %>%
+    bind_cols(., hyd_res_pnd)
+
   hyd_res <- bind_rows(hyd_res, hyd_add)
 
   return(hyd_res)

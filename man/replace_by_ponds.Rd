@@ -4,7 +4,14 @@
 \alias{replace_by_ponds}
 \title{Implement ponds by replacing land objects.}
 \usage{
-replace_by_ponds(swat_inputs, hru_id, to_cha_id, from_cha_id = NULL)
+replace_by_ponds(
+  swat_inputs,
+  hru_id,
+  to_cha_id,
+  from_cha_id,
+  res_res_pnd,
+  hyd_res_pnd
+)
 }
 \arguments{
 \item{swat_inputs}{List with SWAT+ input files.}
@@ -20,8 +27,13 @@ The input can be a single numeric value or a vector of values. \code{to_cha_id}
 must be the same length as \code{hru_id}. Each channel ID corresponds to the
 respective \code{hru_id}.}
 
-\item{from_cha_id}{(optional) channel IDs which send water to the implemented
-ponds.
+\item{from_cha_id}{Channel IDs which send water to the implemented
+ponds.}
+
+\item{res_res_pnd}{Table with rel, sed and nut pointers for the added ponds.
+ponds.}
+
+\item{hyd_res_pnd}{Table with hydrology.res parameters for the added ponds.
 
 The input is default \code{NA}. Then the channel routing remains unchanged.
 Multiple channels can be rerouted into a pond. If \code{hru_id} is a single

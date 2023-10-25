@@ -4,10 +4,12 @@
 \alias{update_hyd_res_pond}
 \title{Update the hydrology.res input table.}
 \usage{
-update_hyd_res_pond(hyd_res, hru_id, area)
+update_hyd_res_pond(hyd_res, hyd_res_pnd, hru_id, area)
 }
 \arguments{
 \item{hyd_res}{hydrology.res input table.}
+
+\item{hyd_res_pnd}{hydrology.res parameters table for added pond.}
 
 \item{hru_id}{ID of the HRU which is replaced by a pond.}
 
