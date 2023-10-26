@@ -167,32 +167,40 @@ load_nswrm_def <- function(file_path, type, nswrm_defs, swat_inputs, overwrite) 
     stop("An NSWRM definition table for the type '", type, "' already exists.\n",
          "If the existing table should be overwritten please set ",
          "'overwrite = TRUE'.")
-  } else if(type %in% names(nswrm_defs) & overwrite) {
-    warning("NSWRM definition table for '", type, "' will be overwritten!\n",
-            'This also requires to reload the NSWRM location table if it was',
-            'already loaded before')
-    nswrm_defs$nswrm_locations <- NULL
   }
 
   if (type == 'land_use') {
     nswrm_defs$land_use <- load_luse_def(file_path, swat_inputs)
     nswrm_defs$nswrm_lookup <- update_nswrm_lookup(nswrm_defs$nswrm_lookup,
-                                                   'land_use',
+                                                   type,
                                                    nswrm_defs$land_use$nswrm,
                                                    overwrite)
 
   } else if (type == 'management') {
     nswrm_defs$management <- load_mgt_def(file_path, swat_inputs)
     nswrm_defs$nswrm_lookup <- update_nswrm_lookup(nswrm_defs$nswrm_lookup,
-                                                   'management',
+                                                   type,
                                                    names(nswrm_defs$management),
                                                    overwrite)
   } else if (type == 'pond') {
-    nswrm_defs$pond <- load_water_def(file_path, swat_inputs, type = 'pond')
+    nswrm_defs$pond <- load_water_def(file_path, swat_inputs, type)
     nswrm_defs$nswrm_lookup <- update_nswrm_lookup(nswrm_defs$nswrm_lookup,
-                                                   'pond',
-                                                   'pond',
+                                                   type,
+                                                   type,
                                                    overwrite)
+  } else if (type == 'wetland') {
+    nswrm_defs$pond <- load_water_def(file_path, swat_inputs, type)
+    nswrm_defs$nswrm_lookup <- update_nswrm_lookup(nswrm_defs$nswrm_lookup,
+                                                   type,
+                                                   type,
+                                                   overwrite)
+  }
+
+  if(type %in% names(nswrm_defs) & overwrite) {
+    warning("NSWRM definition table for '", type, "' will be overwritten!\n",
+            'This also requires to reload the NSWRM location table if it was ',
+            'already loaded before')
+    nswrm_defs$nswrm_locations <- NULL
   }
 
   return(nswrm_defs)
@@ -396,7 +404,7 @@ load_mgt_def <- function(file_path, swat_inputs) {
 #'
 #' @importFrom dplyr left_join mutate select %>%
 #' @importFrom purrr map map_lgl
-#' @importFrom readr cols read_csv
+#' @importFrom readr cols col_guess read_csv
 #'
 #' @keywords internal
 #'
@@ -406,6 +414,11 @@ load_water_def <- function(file_path, swat_inputs, type) {
                                         .default = col_guess()),
                        na = c('', 'NA'))
   # Initialization of optional parameter columns
+  if (!'cha_to_id' %in% names(pond_def) & type == 'pond') {
+    stop("'cha_to_id' must be defined for all ponds")
+  } else if(!'cha_to_id' %in% names(pond_def)) {
+    pond_def <- mutate(pond_def, cha_to_id = NA_integer_)
+  }
   if (!'cha_from_id' %in% names(pond_def)) {
     pond_def <- mutate(pond_def, cha_from_id = NA_integer_)
   } else {
@@ -472,15 +485,20 @@ load_water_def <- function(file_path, swat_inputs, type) {
   hru_id_na <- is.na(pond_def$hru_id)
   cha_id_na <- is.na(pond_def$cha_to_id)
   is_no_hru_id    <- ! pond_def$hru_id %in% swat_inputs$hru_data.hru$id
-  is_no_cha_to_id <- ! pond_def$cha_to_id %in% swat_inputs$chandeg.con$id
+  if(type == 'pond') {
+    is_no_cha_to_id <- ! pond_def$cha_to_id %in% swat_inputs$chandeg.con$id
+  } else {
+    is_no_cha_to_id <- ! (pond_def$cha_to_id %in% swat_inputs$chandeg.con$id |
+                          is.na(pond_def$cha_to_id))
+  }
   is_no_cha_fr_id <- map_lgl(pond_def$cha_from_id,
                        ~ !all(is.na(.x) | .x %in% swat_inputs$chandeg.con$id))
-  is_no_rel_name  <- pond_def$rel %in% swat_inputs$res_rel.dtl_names |
-                     ! is.na(pond_def$rel)
-  is_no_sed_name  <- pond_def$sed %in% swat_inputs$sediment.res$name |
-                     ! is.na(pond_def$sed)
-  is_no_nut_name  <- pond_def$rel %in% swat_inputs$nutrients.res$name |
-                     ! is.na(pond_def$rel)
+  is_no_rel_name  <- ! (pond_def$rel %in% swat_inputs$res_rel.dtl_names |
+                        is.na(pond_def$rel))
+  is_no_sed_name  <- ! (pond_def$sed %in% swat_inputs$sediment.res$name |
+                       is.na(pond_def$sed))
+  is_no_nut_name  <- ! (pond_def$nut %in% swat_inputs$nutrients.res$name |
+                        is.na(pond_def$nut))
 
   if (any(c(hru_id_na, cha_id_na, is_no_hru_id,
             is_no_cha_to_id, is_no_cha_fr_id,
@@ -527,7 +545,7 @@ load_water_def <- function(file_path, swat_inputs, type) {
       no_rel_name_msg <- ''
     }
     if(any(is_no_sed_name)) {
-      no_rel_name_msg <-
+      no_sed_name_msg <-
         paste0("Row IDs where 'sed' is not defined in sediment.res: ",
                paste(which(is_no_sed_name), collapse = ', '), '\n')
     } else {

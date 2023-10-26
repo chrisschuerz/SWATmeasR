@@ -40,6 +40,9 @@ read_swat_inputs <- function(project_path) {
     reservoir.res     = read_tbl(paste0(project_path, '/reservoir.res')),
     hydrology.res     = read_tbl(paste0(project_path, '/hydrology.res')),
     reservoir.con     = read_con_file(paste0(project_path, '/reservoir.con')),
+    wetland.wet       = read_tbl(paste0(project_path, '/wetland.wet'),
+                                 col_names = c('id', 'name', 'init', 'hyd',
+                                               'rel', 'sed', 'nut')),
     sediment.res      = read_tbl(paste0(project_path, '/sediment.res')),
     nutrients.res     = read_tbl(paste0(project_path, '/nutrients.res')),
     res_rel.dtl_names = read_dtl_names(paste0(project_path, '/res_rel.dtl'))
@@ -99,7 +102,7 @@ read_tbl <- function(file_path, col_names = NULL, n_skip = 1) {
            'were provided to generate empty table.')
     }
 
-    tbl <- tibble(!!!rep(NA, length(col_names)),
+    tbl <- tibble(!!!rep(NA_character_, length(col_names)),
                   .rows = 0, .name_repair = ~ col_names)
   }
 
