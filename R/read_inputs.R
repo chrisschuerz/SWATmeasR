@@ -37,12 +37,35 @@ read_swat_inputs <- function(project_path) {
     rout_unit.def     = read_tbl(paste0(project_path, '/rout_unit.def')),
     rout_unit.ele     = read_tbl(paste0(project_path, '/rout_unit.ele')),
     chandeg.con       = read_con_file(paste0(project_path, '/chandeg.con')),
-    reservoir.res     = read_tbl(paste0(project_path, '/reservoir.res')),
-    hydrology.res     = read_tbl(paste0(project_path, '/hydrology.res')),
-    reservoir.con     = read_con_file(paste0(project_path, '/reservoir.con')),
+    reservoir.res     = read_tbl(paste0(project_path, '/reservoir.res'),
+                                 col_names = c('id', 'name', 'init', 'hyd',
+                                               'rel', 'sed', 'nut'),
+                                 col_types = 'icccccc'),
+    hydrology.res     = read_tbl(paste0(project_path, '/hydrology.res'),
+                                 col_names = c('name', 'yr_op', 'mon_op',
+                                               'area_ps', 'vol_ps',
+                                               'area_es', 'vol_es', 'k',
+                                               'evap_co', 'shp_co1', 'shp_co2'),
+                                 col_types = 'ciidddddddd'),
+    reservoir.con     = read_con_file(paste0(project_path, '/reservoir.con')
+                                      # ,
+                                      # col_names = c('id', 'name', 'gis_id',
+                                      #               'area', 'lat', 'lon',
+                                      #               'elev', 'obj_id', 'wst',
+                                      #               'cst', 'ovfl', 'rule',
+                                      #               'out_tot'),
+                                      # col_types = 'iciddddiciiii'
+                                      ),
     wetland.wet       = read_tbl(paste0(project_path, '/wetland.wet'),
                                  col_names = c('id', 'name', 'init', 'hyd',
-                                               'rel', 'sed', 'nut')),
+                                               'rel', 'sed', 'nut'),
+                                 col_types = 'icccccc'),
+    hydrology.wet     = read_tbl(paste0(project_path, '/hydrology.wet'),
+                                 col_names = c('name', 'hru_ps', 'dp_ps',
+                                               'hru_es', 'dp_es', 'k', 'evap',
+                                               'vol_area_co', 'vol_dp_a',
+                                               'vol_dp_b', 'hru_frac'),
+                                 col_types = 'cdddddddddd'),
     sediment.res      = read_tbl(paste0(project_path, '/sediment.res')),
     nutrients.res     = read_tbl(paste0(project_path, '/nutrients.res')),
     res_rel.dtl_names = read_dtl_names(paste0(project_path, '/res_rel.dtl'))
@@ -64,12 +87,13 @@ read_swat_inputs <- function(project_path) {
 #' @returns The SWAT+ input file as a tibble.
 #'
 #' @importFrom data.table fread
-#' @importFrom dplyr  %>%
+#' @importFrom dplyr recode %>%
+#' @importFrom purrr map2_df
 #' @importFrom tibble add_column tibble
 #'
 #' @keywords internal
 #'
-read_tbl <- function(file_path, col_names = NULL, n_skip = 1) {
+read_tbl <- function(file_path, col_names = NULL, col_types = NULL, n_skip = 1) {
   if (file.exists(file_path)) {
     tbl <- fread(file_path, skip = n_skip + 1, header = FALSE)
     if (is.null(col_names)) {
@@ -102,8 +126,14 @@ read_tbl <- function(file_path, col_names = NULL, n_skip = 1) {
            'were provided to generate empty table.')
     }
 
-    tbl <- tibble(!!!rep(NA_character_, length(col_names)),
+    tbl <- tibble(!!!rep(NA, length(col_names)),
                   .rows = 0, .name_repair = ~ col_names)
+  }
+
+  if(!is.null(col_types)) {
+    col_types <- unlist(strsplit(col_types, '')) %>%
+      recode(., c = 'character', d = 'numeric', i = 'integer')
+    tbl <- map2_df(tbl, col_types, ~ as(.x, .y))
   }
 
   return(tbl)

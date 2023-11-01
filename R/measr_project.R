@@ -83,12 +83,25 @@ measr_project <- R6Class(
       #'   generates the file `'mgt_scenarios.rds'` which is the required input
       #'   to define management related NSWRMs.
       #' - `'pond'`: A pond definition table includes all definitions for pond
-      #'   locations. The `pond` table must provide the columns `name`,
+      #'   locations. The `pond` table must provide the columns `hru_id`,
       #'   `to_cha_id`, and `from_cha_id`.
+      #'   Optionally, the hydrology.res parameters for a pond and the pointers
+      #'   for `'rel'` (release decision table), `'sed'` for sediment.res
+      #'   parametrisations, and `'nut'` for nutrients.res parametrisations can
+      #'   be defined.
+      #' - `'wetland'`: A pond definition table includes all definitions for
+      #'   pond locations. The `pond` table must provide the columns `hru_id`.
+      #'   Optionally, water from channels can be routed into a wetland. And
+      #'   the wetland's connectivity can be changed to a channel. In that case
+      #'   `to_cha_id`, and `from_cha_id` must be defined. The hydrology.wet
+      #'   parameters for a wetland and the pointers for `'rel'` (release
+      #'     decision table), `'sed'` for sediment.res parametrisations, and
+      #'     `'nut'` for nutrients.res parametrisations can be defined.
+      #'
     #'
     #' @param file_path Path to the '.csv' or '.rds' definition file.
     #' @param type Type of the NSWRM which is defined by this input file. The
-    #'   type must be one of the options `'land_use'`, `'pond'`.
+    #'   type must be one of the options `'land_use'`, `'management'` `'pond'`.
     #' @param overwrite Overwrite existing definition table? Default is `FALSE`.
     #' If `TRUE` existing definition table can be overwritten.
     #'

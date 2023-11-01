@@ -159,8 +159,8 @@ load_nswrm_def <- function(file_path, type, nswrm_defs, swat_inputs, overwrite) 
 
   # For testing so far only the two types land_use and pond are implemented.
   # Will be updated when additional routines are inlcuded.
-  if (!type %in% c('land_use', 'management', 'pond')) {
-    stop("'type' must be 'land_use', 'management', or 'pond'.")
+  if (!type %in% c('land_use', 'management', 'pond', 'wetland')) {
+    stop("'type' must be 'land_use', 'management', 'pond', or 'wetland'.")
   }
 
   if (type %in% names(nswrm_defs) & !overwrite) {
@@ -189,7 +189,7 @@ load_nswrm_def <- function(file_path, type, nswrm_defs, swat_inputs, overwrite) 
                                                    type,
                                                    overwrite)
   } else if (type == 'wetland') {
-    nswrm_defs$pond <- load_water_def(file_path, swat_inputs, type)
+    nswrm_defs$wetland <- load_water_def(file_path, swat_inputs, type)
     nswrm_defs$nswrm_lookup <- update_nswrm_lookup(nswrm_defs$nswrm_lookup,
                                                    type,
                                                    type,
@@ -405,100 +405,60 @@ load_mgt_def <- function(file_path, swat_inputs) {
 #' @importFrom dplyr left_join mutate select %>%
 #' @importFrom purrr map map_lgl
 #' @importFrom readr cols col_guess read_csv
+#' @importFrom tidyselect all_of
 #'
 #' @keywords internal
 #'
 load_water_def <- function(file_path, swat_inputs, type) {
-  pond_def <- read_csv(file_path, lazy = FALSE,
-                       col_types = cols(hru_id = 'i', cha_to_id = 'i',
-                                        .default = col_guess()),
+  def_tbl <- read_csv(file_path, lazy = FALSE,
+                       col_types = cols(col_guess()),
                        na = c('', 'NA'))
-  # Initialization of optional parameter columns
-  if (!'cha_to_id' %in% names(pond_def) & type == 'pond') {
-    stop("'cha_to_id' must be defined for all ponds")
-  } else if(!'cha_to_id' %in% names(pond_def)) {
-    pond_def <- mutate(pond_def, cha_to_id = NA_integer_)
-  }
-  if (!'cha_from_id' %in% names(pond_def)) {
-    pond_def <- mutate(pond_def, cha_from_id = NA_integer_)
-  } else {
-    pond_def$cha_from_id <- map(pond_def$cha_from_id,
-                                ~ eval(parse(text = paste0('c(', .x, ')'))))
-  }
-  if (!'area_ps' %in% names(pond_def)) {
-    pond_def <- mutate(pond_def, area_ps = NA_real_)
-  } else {
-    stopifnot(is.numeric(pond_def$area_ps))
-  }
-  if (!'vol_ps' %in% names(pond_def)) {
-    pond_def <- mutate(pond_def, vol_ps = NA_real_)
-  } else {
-    stopifnot(is.numeric(pond_def$vol_ps))
-  }
-  if (!'area_es' %in% names(pond_def)) {
-    pond_def <- mutate(pond_def, area_es = NA_real_)
-  } else {
-    stopifnot(is.numeric(pond_def$area_es))
-  }
-  if (!'vol_es' %in% names(pond_def)) {
-    pond_def <- mutate(pond_def, vol_es = NA_real_)
-  } else {
-    stopifnot(is.numeric(pond_def$vol_es))
-  }
-  if (!'k' %in% names(pond_def)) {
-    pond_def <- mutate(pond_def, k = NA_real_)
-  } else {
-    stopifnot(is.numeric(pond_def$k))
-  }
-  if (!'evap_co' %in% names(pond_def)) {
-    pond_def <- mutate(pond_def, evap_co = NA_real_)
-  } else {
-    stopifnot(is.numeric(pond_def$evap_co))
-  }
-  if (!'shp_co1' %in% names(pond_def)) {
-    pond_def <- mutate(pond_def, shp_co1 = NA_real_)
-  } else {
-    stopifnot(is.numeric(pond_def$shp_co1))
-  }
-  if (!'shp_co2' %in% names(pond_def)) {
-    pond_def <- mutate(pond_def, shp_co2 = NA_real_)
-  } else {
-    stopifnot(is.numeric(pond_def$shp_co2))
-  }
-  if (!'rel' %in% names(pond_def)) {
-    pond_def <- mutate(pond_def, rel = NA_character_)
-  }
-  if (!'sed' %in% names(pond_def)) {
-    pond_def <- mutate(pond_def, sed = NA_character_)
-  } else {
-    stopifnot(is.character(pond_def$sed))
-  }
-  if (!'nut' %in% names(pond_def)) {
-    pond_def <- mutate(pond_def, nut = NA_character_)
-  } else {
-    stopifnot(is.character(pond_def$nut))
-  }
 
-  pond_def <- select(pond_def, hru_id, cha_to_id, cha_from_id, area_ps, vol_ps,
-                     area_es, vol_es, k, evap_co, shp_co1, shp_co2, rel, sed, nut)
-
-  hru_id_na <- is.na(pond_def$hru_id)
-  cha_id_na <- is.na(pond_def$cha_to_id)
-  is_no_hru_id    <- ! pond_def$hru_id %in% swat_inputs$hru_data.hru$id
+  # Initialization and checks of input table columns
+  def_tbl <- check_settings_column(def_tbl, 'hru_id', 'integer', 'all')
+  def_tbl <- check_settings_column(def_tbl, 'cha_to_id', 'integer', type)
+  if (!'cha_from_id' %in% names(def_tbl)) {
+    def_tbl <- mutate(def_tbl, cha_from_id = NA_integer_)
+  } else {
+    def_tbl$cha_from_id <- map(def_tbl$cha_from_id,
+                                ~ eval(parse(text = paste0('c(', .x, ')')))) %>%
+      map(., ~as.integer(.x))
+  }
   if(type == 'pond') {
-    is_no_cha_to_id <- ! pond_def$cha_to_id %in% swat_inputs$chandeg.con$id
-  } else {
-    is_no_cha_to_id <- ! (pond_def$cha_to_id %in% swat_inputs$chandeg.con$id |
-                          is.na(pond_def$cha_to_id))
+    hyd_par_names <- names(swat_inputs$hydrology.res)[4:11]
+  } else if (type == 'wetland') {
+    hyd_par_names <- names(swat_inputs$hydrology.wet)[2:11]
   }
-  is_no_cha_fr_id <- map_lgl(pond_def$cha_from_id,
+
+  for (par_i in hyd_par_names) {
+    def_tbl <- check_settings_column(def_tbl, par_i, 'numeric', 'all')
+  }
+
+  def_tbl <- check_settings_column(def_tbl, 'rel', 'character', 'all')
+  def_tbl <- check_settings_column(def_tbl, 'sed', 'character', 'all')
+  def_tbl <- check_settings_column(def_tbl, 'nut', 'character', 'all')
+
+  def_tbl <- select(def_tbl, hru_id, cha_to_id, cha_from_id,
+                    all_of(hyd_par_names), rel, sed, nut)
+
+  hru_id_na <- is.na(def_tbl$hru_id)
+  is_no_hru_id    <- ! def_tbl$hru_id %in% swat_inputs$hru_data.hru$id
+  if(type == 'pond') {
+    cha_id_na <- is.na(def_tbl$cha_to_id)
+    is_no_cha_to_id <- ! def_tbl$cha_to_id %in% swat_inputs$chandeg.con$id
+  } else {
+    cha_id_na <- FALSE
+    is_no_cha_to_id <- ! (def_tbl$cha_to_id %in% swat_inputs$chandeg.con$id |
+                          is.na(def_tbl$cha_to_id))
+  }
+  is_no_cha_fr_id <- map_lgl(def_tbl$cha_from_id,
                        ~ !all(is.na(.x) | .x %in% swat_inputs$chandeg.con$id))
-  is_no_rel_name  <- ! (pond_def$rel %in% swat_inputs$res_rel.dtl_names |
-                        is.na(pond_def$rel))
-  is_no_sed_name  <- ! (pond_def$sed %in% swat_inputs$sediment.res$name |
-                       is.na(pond_def$sed))
-  is_no_nut_name  <- ! (pond_def$nut %in% swat_inputs$nutrients.res$name |
-                        is.na(pond_def$nut))
+  is_no_rel_name  <- ! (def_tbl$rel %in% swat_inputs$res_rel.dtl_names |
+                        is.na(def_tbl$rel))
+  is_no_sed_name  <- ! (def_tbl$sed %in% swat_inputs$sediment.res$name |
+                       is.na(def_tbl$sed))
+  is_no_nut_name  <- ! (def_tbl$nut %in% swat_inputs$nutrients.res$name |
+                        is.na(def_tbl$nut))
 
   if (any(c(hru_id_na, cha_id_na, is_no_hru_id,
             is_no_cha_to_id, is_no_cha_fr_id,
@@ -579,23 +539,43 @@ load_water_def <- function(file_path, swat_inputs, type) {
                      'null')
 
   # Initialize pond and wetland parameters and pointers
-  pond_def <- pond_def %>%
-    left_join(., hru_area, by = c('hru_id' = 'id')) %>%
-    mutate(area_ps = area,
-           vol_ps  = ifelse(is.na(vol_ps), 10*area_ps, vol_ps),
-           area_es = ifelse(is.na(area_es), 1.15*area_ps, area_es),
-           vol_es  = ifelse(is.na(vol_es), 10*area_es, vol_es),
-           k       = ifelse(is.na(k), 0, k),
-           evap_co = ifelse(is.na(evap_co), 0.6, evap_co),
-           shp_co1 = ifelse(is.na(shp_co1), 0, shp_co1),
-           shp_co2 = ifelse(is.na(shp_co2), 0, shp_co2),
-           rel     = ifelse(is.na(rel), rel_dflt, rel),
-           sed     = ifelse(is.na(sed), sed_dflt, sed),
-           nut     = ifelse(is.na(nut), nut_dflt, nut)
+  if (type == 'pond') {
+    def_tbl <- def_tbl %>%
+      left_join(., hru_area, by = c('hru_id' = 'id')) %>%
+      mutate(area_ps = area,
+             vol_ps  = ifelse(is.na(vol_ps), 10*area_ps, vol_ps),
+             area_es = ifelse(is.na(area_es), 1.15*area_ps, area_es),
+             vol_es  = ifelse(is.na(vol_es), 10*area_es, vol_es),
+             k       = ifelse(is.na(k), 0, k),
+             evap_co = ifelse(is.na(evap_co), 0.6, evap_co),
+             shp_co1 = ifelse(is.na(shp_co1), 0, shp_co1),
+             shp_co2 = ifelse(is.na(shp_co2), 0, shp_co2),
+             rel     = ifelse(is.na(rel), rel_dflt, rel),
+             sed     = ifelse(is.na(sed), sed_dflt, sed),
+             nut     = ifelse(is.na(nut), nut_dflt, nut)
 
-           ) %>%
-    select(- area)
-  return(pond_def)
+             ) %>%
+      select(- area)
+  } else if (type == 'wetland') {
+    def_tbl <- def_tbl %>%
+      mutate(hru_ps      = ifelse(is.na(hru_ps),  0.1, hru_ps),
+             dp_ps       = ifelse(is.na(dp_ps),  20.0, dp_ps),
+             hru_es      = ifelse(is.na(hru_es), 0.25, hru_es),
+             dp_es       = ifelse(is.na(dp_es), 100.0, dp_es),
+             k           = ifelse(is.na(k), 0.01, k),
+             evap        = ifelse(is.na(evap), 0.7, evap),
+             vol_area_co = ifelse(is.na(vol_area_co), 1.0, vol_area_co),
+             vol_dp_a    = ifelse(is.na(vol_dp_a), 1.0, vol_dp_a),
+             vol_dp_b    = ifelse(is.na(vol_dp_b), 1.0, vol_dp_b),
+             hru_frac    = ifelse(is.na(hru_frac), 0.5, hru_frac),
+             rel     = ifelse(is.na(rel), rel_dflt, rel),
+             sed     = ifelse(is.na(sed), sed_dflt, sed),
+             nut     = ifelse(is.na(nut), nut_dflt, nut)
+
+             )
+  }
+
+  return(def_tbl)
 }
 
 #' Add entries for NSWRMs in the NSWRM lookup table
@@ -661,4 +641,30 @@ get_mgt_short_labels <- function(mgt_labels) {
   names(lbl_sub) <- mgt_labels
 
   return(lbl_sub)
+}
+
+#' Check columns and types of data for settings input table.
+#'
+#' @param tbl Settings table.
+#' @param col_name Name of column which is checked and/or coerced.
+#' @param val_class Class which data should have (e.g. character, interger, or numeric).
+#' @param measr_type Type of measure, either pond, wetland or all.
+#'
+#' @@returns The input table with data type coerced to val_class if necessary.
+#'
+#' @keywords internal
+#'
+check_settings_column <- function(tbl, col_name, val_class, measr_type) {
+  if(col_name == 'hru_id' & ! col_name %in% names(tbl)) {
+    stop("The column 'hru_id' is not defined.")
+  }
+  if (! col_name %in% names(tbl) & measr_type == 'pond') {
+    stop(paste0("'", col_name,"' must be defined for all ponds."))
+  } else if (!col_name %in% names(tbl) | all(is.na(tbl[[col_name]]))) {
+    tbl[[col_name]] <- as(NA, val_class)
+  } else {
+    tbl[[col_name]] <- as(tbl[[col_name]], val_class)
+  }
+
+  return(tbl)
 }

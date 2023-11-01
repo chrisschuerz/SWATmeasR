@@ -4,7 +4,7 @@
 \alias{read_tbl}
 \title{Read a SWAT+ input file which has a tabular structure.}
 \usage{
-read_tbl(file_path, col_names = NULL, n_skip = 1)
+read_tbl(file_path, col_names = NULL, col_types = NULL, n_skip = 1)
 }
 \arguments{
 \item{file_path}{Path of the SWAT+ input file.}
