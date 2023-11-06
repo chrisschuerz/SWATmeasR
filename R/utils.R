@@ -61,3 +61,19 @@ plural <- function(n) {
 #' @keywords internal
 #'
 '%&%' <- function(a, b) paste0(a, b)
+
+
+#' Convert number to character and add leading zeros based on existing IDs
+#'
+#' @param i ID i which is converted
+#' @param ids Numeric vector of existing IDs
+#'
+#' @returns The value of i as character with leading zeros
+#'
+#' @keywords internal
+#'
+add_lead_zeros <- function(i, ids) {
+  n_digit <- nchar(as.character(max(ids)))
+  num_fmt <- paste0('%0', n_digit, 'd')
+  sprintf(num_fmt, i)
+}

@@ -1,130 +1,135 @@
-#' Implement ponds by replacing land objects.
+#' Implement wetlands by adding surface storage to land objects and removing
+#' existing drainage.
 #'
-#' The land objects defined by the `hru_id` are assigned an area of (almost) 0.
-#' The connection fractions for those land objects are set to 0. Reservoirs with
-#' the same area/lat/long/elev are generated (at the moment with default
-#' reservoir dimensions) are implemented in the reservoir input files. All land
-#' objects which initially routed water to the land objects with `hru_id` now
-#' route water to the new reservoirs. The new reservoirs must route water to one
-#' channel each defined with `to_cha_id`. Optionally a `from_cha_id` can be
-#' defined if channels should be rerouted into the new reservoir.
+#' Surface storage is added to the land objects defined by the `hru_id`, by
+#' parameterizing a wetland in `wetland.wet` and `hydrology.wet` and adding this
+#' wetland as surface storage in `hru-data.hru`. If an HRU was drained, the
+#' drainage is removed and a new entry in `landuse.lum` is generated for that
+#' HRU. Optionally, a `to_cha_id` or `from_cha_id` can be defined if channels
+#' should be rerouted into the wetland or the water from wetlands should be
+#' routed directly into a channel.
 #'
 #' @param swat_inputs List with SWAT+ input files.
-#' @param hru_id HRU IDs which will be replaced by ponds.
+#'
+#' @param hru_id HRU IDs to which surface water storage (wetland) will be added.
 #'
 #'   The input can be a single numeric value to replace a single HRU, or a
-#'   vector of numeric values if multiple HRUs should be replaced by ponds.
+#'   vector of numeric values if multiple HRUs are modified.
 #'
-#' @param to_cha_id Channel IDs into which implemented ponds route water.
+#' @param to_cha_id (Optional) channel IDs into which water from wetland is
+#'   routed. (all water from that HRU is then routed into the defined channel
+#'   instead of the initially defined neighouring hydrological objects)
 #'
 #'   The input can be a single numeric value or a vector of values. `to_cha_id`
 #'   must be the same length as `hru_id`. Each channel ID corresponds to the
 #'   respective `hru_id`.
 #'
-#' @param from_cha_id Channel IDs which send water to the implemented
-#'   ponds.
-#'
-#' @param res_res_pnd Table with rel, sed and nut pointers for the added ponds.
-#'   ponds.
-#'
-#' @param hyd_res_pnd Table with hydrology.res parameters for the added ponds.
+#' @param from_cha_id (Optional) channel IDs which send water to the wetlands.
 #'
 #'   The input is default `NA`. Then the channel routing remains unchanged.
-#'   Multiple channels can be rerouted into a pond. If `hru_id` is a single
+#'   Multiple channels can be rerouted into a wetland. If `hru_id` is a single
 #'   value `from_cha_id` can be a single numeric value to reroute one channel,
-#'   or a vector to reroute multiple channels into the implemented pond. If
-#'   `hru_id` is a vector, `from_cha_id` must be a list with the same length, as
-#'   `hru_id`. If for a respective `hru_id` no channels should be rerouted that
-#'   list element is `NA`, otherwise the list element can be a value or a
-#'   vector.
+#'   or a vector to reroute multiple channels. If `hru_id` is a vector,
+#'   `from_cha_id` must be a list with the same length, as `hru_id`. If for a
+#'   respective `hru_id` no channels should be rerouted that list element is
+#'   `NA`, otherwise the list element can be a value or a vector.
+#'
+#' @param wet_wet_sel Table with rel, sed and nut pointers for the added
+#'   wetlands. The pointers will be written into wetlands.wet
+#'
+#' @param hyd_wet_sel Table with hydrology.wet parameters for the implemented
+#'   wetlands.
 #'
 #' @returns The `swat_inputs` list with updated input tables which include all
-#'   necessary changes to replace land objects by ponds.
+#'   necessary changes to add surface water storage to HRUs and remove tile
+#'   flow.
 #'
 #' @keywords internal
 #'
 implement_wetlands <- function(swat_inputs, hru_id, to_cha_id, from_cha_id,
-                               res_wet, hyd_wet) {
+                               lu_mgt_sel, wet_wet_sel, hyd_wet_sel) {
   # Check if an HRU is already a wetland
-  is_wet <- check_is_wet(swat_inputs, hru_id)
+  is_wetl <- check_is_wetland(swat_inputs, hru_id)
 
   # Exclude that HRUs/channels from the ones which will be replaced/modified/
-  hru_id    <- hru_id[!is_wet]
-  to_cha_id <- to_cha_id[!is_wet]
+  hru_id    <- hru_id[!is_wetl]
+  to_cha_id <- to_cha_id[!is_wetl]
   if(is.list(from_cha_id)) {
-    from_cha_id   <- from_cha_id[!is_wet]
+    from_cha_id   <- from_cha_id[!is_wetl]
   }
 
-  # If there are HRUs remaining which can be replaced by ponds loop over all
+  # If there are HRUs remaining where wetlands should be added loop over all
   # land objects and update the respective input files.
   if(length(hru_id) > 0) {
-    # rtu_con_chg <- get_chg_ids_pond(swat_inputs$rout_unit.con, hru_id)
     for (i in 1:length(hru_id)) {
       hru_i <- hru_id[i]
-      to_cha_i <- to_cha_id[i]
+      # Generate a character string for the HRU ID for naming in the input files.
+      hru_i_chr <- add_lead_zeros(hru_i, swat_inputs$hru_data.hru$id)
+
+      to_cha_i   <- to_cha_id[i]
       from_cha_i <- unlist(from_cha_id[i])
-      wet_wet_i <- wet_wet[i, ]
-      hyd_wet_i <- hyd_wet[i, ]
 
-      # swat_inputs$object.cnt <- update_obj_cnt_pond(swat_inputs$object.cnt)
+      wet_wet_i <- wet_wet_sel[i, ]
+      hyd_wet_i <- hyd_wet_sel[i, ]
 
-      swat_inputs$wetland.wet <- update_wet_wet(swat_inputs$wetland.wet,
-                                                wet_wet_i,
-                                                hru_i)
-      swat_inputs$hydrology.wet<- update_hyd_wet(swat_inputs$hydrology.wet,
-                                                 hyd_wet_i,
-                                                 hru_i,
-                                                 area_i)
-      swat_inputs$hru_data.hru <- update_hru_hru_wetl(swat_inputs$hydrology.res,
-                                                      hru_i)
+      # Update the wetland.wet input file by adding the new wetland for hru_i
+      swat_inputs$wetland.wet   <- update_wet_wet(swat_inputs$wetland.wet,
+                                                  wet_wet_i,
+                                                  hru_i_chr)
+      # Update hydrology.wet by adding the parameters for the new wetland in hru_i
+      swat_inputs$hydrology.wet <- update_hyd_wet(swat_inputs$hydrology.wet,
+                                                  hyd_wet_i,
+                                                  hru_i_chr)
+
+      has_drn <- is_hru_drained(swat_inputs, hru_i)
+
+      # Copy and rename the landuse.lum definition of hru_i and remove any tile.
       swat_inputs$landuse.lum   <- update_lum_wetl(swat_inputs$landuse.lum,
-                                                   )
-
-      res_id <- swat_inputs$reservoir.res$id[nrow(swat_inputs$reservoir.res)]
-      swat_inputs$reservoir.con <- update_res_con_pond(swat_inputs$reservoir.con,
-                                                       swat_inputs$rout_unit.con,
+                                                   swat_inputs$hru_data.hru,
+                                                   lu_mgt_sel,
+                                                   hru_i,
+                                                   hru_id_chr)
+      # Update hru-data.hru by adding the surface storage and updating lu_mgt.
+      lum_name_i <- swat_inputs$landuse.lum$name[nrow(swat_inputs$landuse.lum)]
+      swat_inputs$hru_data.hru  <- update_hru_hru_wetl(swat_inputs$hru_data.hru,
+                                                       lum_name_i,
                                                        hru_i,
-                                                       to_cha_i,
-                                                       res_id)
-
+                                                       hru_i_chr)
+    if(!is.na(to_cha_id) | has_drn) {
+      swat_inputs$file_updated['rout_unit.con'] <- TRUE
       swat_inputs$rout_unit.con <- update_rtu_con_wetl(swat_inputs$rout_unit.con,
-                                                       rtu_con_chg,
-                                                       hru_i,
-                                                       res_id)
-      swat_inputs$hru.con <- update_hru_con_pond(swat_inputs$hru.con, hru_i)
-
+                                                       to_cha_i,
+                                                       has_drn,
+                                                       hru_i)
+    }
+    if(!is.na(from_cha_id)) {
+      swat_inputs$file_updated['chandeg.con'] <- TRUE
       swat_inputs$chandeg.con <- update_cha_con_wetl(swat_inputs$chandeg.con,
                                                      from_cha_i,
-                                                     res_id)
+                                                     hru_i)
+    }
     }
     # Set the input files which are adjusted by pond replacement to 'modified'
     # so that they will be written when writing output files.
-    swat_inputs$file_updated[c('object.cnt', 'reservoir.res', 'reservoir.con',
-                               'hydrology.res', 'rout_unit.con', 'hru.con',
-                               'chandeg.con')] <- TRUE
+    file_upd <- c('wetland.wet', 'hydrology.wet', 'landuse.lum', 'hru_data.hru')
+    swat_inputs$file_updated[file_upd] <- TRUE
   }
 
   return(swat_inputs)
 }
 
-#' Check the function input arguments.
-#'
-#' Lengths and data types are checked. Routine checks if HRUs were already
-#' replaced by ponds, triggers a warning if yes and removes the HRUs from the
-#' replacement set.
+#' Check if HRUs are already wetlands..
 #'
 #' @param swat_inputs List with SWAT+ input files.
-#' @param hru_id HRU IDs which will be replaced by ponds.
-#' @param to_cha_id Channel IDs into which implemented ponds route water.
-#' @param from_cha_id (optional) channel IDs which send water to the implemented
-#'   ponds.
+#' @param hru_id HRU IDs to which surface water storage (wetland) will be added.
 #'
-#' @returns A boolean vector to indicate which HRUs are already replaced by
-#'   ponds.
+#' @returns A boolean vector to indicate which HRUs are already wetlands.
+#'
+#' @importFrom dplyr filter %>%
 #'
 #' @keywords internal
 #'
-check_is_wet <- function(swat_inputs, hru_id, to_cha_id, from_cha_id) {
+check_is_wetland <- function(swat_inputs, hru_id) {
   wet_ids <- filter(swat_inputs$hru_data.hru, surf_stor != 'null') %>%
     .$id
   is_wet <- hru_id %in% wet_ids
@@ -136,147 +141,181 @@ check_is_wet <- function(swat_inputs, hru_id, to_cha_id, from_cha_id) {
   return(is_wet)
 }
 
-#' Update the reservoir.res input table.
+#' Check if an HRU has tile drainage implemented or not.
 #'
-#' Add a new line in the reservoir.res table with the ID and name of the new
-#' reservoir. Only the hydrology column `hyd` and the ID are updated. The other
-#' pointers are set to the default entries (currently the case for all
-#' reservoirs).
+#' @param swat_inputs List with SWAT+ input files.
+#' @param hru_id HRU IDs to which surface water storage (wetland) will be added.
 #'
-#' @param res_res reservoir.res input table
-#' @param res_res_pnd table with rel, sed, and nut pointers for added pond.
-#' @param hru_id  ID of the HRU which is replaced by a pond.
+#' @returns A boolean vector to indicate which HRUs are drained.
 #'
-#' @returns Updated reservoir.res input table.
+#' @keywords internal
+#'
+is_hru_drained <- function(swat_inputs, hru_id) {
+  lum_i <- swat_inputs$hru_data.hru$lu_mgt[swat_inputs$hru_data.hru$id == hru_id]
+  swat_inputs$landuse.lum$tile[swat_inputs$landuse.lum$name == lum_i] != 'null'
+}
+
+#' Update the wetland.wet input table.
+#'
+#' Add a new line in the wetland.wet table. The name of the added entry is 'wet'
+#' and the HRU ID. The wetland is initialized with the default 'initwet1'. The
+#' pointer to the right entry in hydrology.wet is initialized ('hydwet' + HRU
+#' ID). The (user defined) pointers to release, sediments, and nutrients are
+#' added.
+#'
+#' @param wet_wet wetland.wet input table
+#' @param wet_wet_i Table with rel, sed, and nut pointers for added pond.
+#' @param hru_id_chr HRU IDs to which surface water storage (wetland) will be
+#'   added. The input is character with leading zeros.
+#'
+#' @returns Updated wetland.wet input table.
 #'
 #' @importFrom dplyr bind_cols bind_rows %>%
 #' @importFrom tibble tibble
 #'
 #' @keywords internal
 #'
-update_wet_wet <- function(wetland_wet, wet_wet, hru_id) {
-  res_add <- tibble(id = max(res_res$id) + 1,
-                    name = paste0('pnd', hru_id),
-                    init = 'initres1',
-                    hyd  = name) %>%
-    bind_cols(., res_res_pnd)
+update_wet_wet <- function(wet_wet, wet_wet_i, hru_id_chr) {
+  wet_add <- tibble(id = max(wet_wet$id) + 1,
+                    name = paste0('wet', hru_id_chr),
+                    init = 'initwet1',
+                    hyd = paste0('hydwet', hru_id_chr)) %>%
+    bind_cols(., wet_wet_i)
 
-  res_res <- bind_rows(res_res, res_add)
+  wet_wet <- bind_rows(wet_wet, wet_add)
 
-  return(res_res)
+  return(wet_wet)
 }
 
-#' Update the hydrology.res input table.
+#' Update the hydrology.wet input table.
 #'
-#' Hydrology parameters for the new reservoir are added to hydrology.res.
-#' Most of the parameters are default for all reservoirs. Default the area and
-#' volume parameters are simple functions of the area. The area is the same as
-#' the replaced land object.
+#' Hydrology parameters for the implemented water wetland water storage are
+#' added to hydrology.hyd. The added parameters are either user defined
+#' (provided with the wetlands definition file) or default if not provided (same
+#' values as set default by SWAT+Editor).
 #'
-#' @param hyd_res hydrology.res input table.
-#' @param hyd_res_pnd hydrology.res parameters table for added pond.
-#' @param hru_id  ID of the HRU which is replaced by a pond.
-#' @param area Area of the replaced land object in ha.
+#' @param hyd_wet hydrology.wet input table.
+#' @param hyd_wet_i hydrology.wet parameters table for added surface water
+#'   storage.
+#' @param hru_id HRU IDs to which surface water storage (wetland) will be added.
+#' @param hru_id_chr HRU IDs to which surface water storage (wetland) will be
+#'   added. The input is character with leading zeros.
 #'
-#' @returns Updated hydrology.res input table.
+#' @returns Updated hydrology.wet input table.
 #'
-#' @importFrom dplyr bind_cols bind_rows
+#' @importFrom dplyr bind_cols bind_rows %>%
 #' @importFrom tibble tibble
 #'
 #' @keywords internal
 #'
-update_wet_wet <- function(hyd_wet, hyd_res_pnd, hru_id, area) {
-  # The implemented parameters are still default paremters. In a future version
-  # the parameters should be input by the user via the pond definition file.
-  hyd_add <- tibble(name = paste0('pnd', hru_id),
-                    yr_op = 1,
-                    mon_op = 1) %>%
-    bind_cols(., hyd_res_pnd)
+update_hyd_wet <- function(hyd_wet, hyd_wet_i, hru_id_chr) {
+  hyd_add <- tibble(name = paste0('hydwet', hru_id_chr)) %>%
+    bind_cols(., hyd_wet_i)
 
-  hyd_res <- bind_rows(hyd_res, hyd_add)
+  hyd_wet <- bind_rows(hyd_wet, hyd_add)
 
-  return(hyd_res)
+  return(hyd_wet)
 }
 
-#' Get the IDs of the units for which the connectivities must be changed.
+#' Update the landuse.lum input table.
 #'
-#' The units in the connectivity input table are identified which initially
-#' routed water into the HRUs which will be replaced by ponds.
+#' By default drainage is removed for HRUs where wetlands are implemented. If
+#' the landuse of a transformed HRU has tile drainage, a new landuse.lum entry
+#' is generated (if it does not already exist). The landuse which is used by the
+#' wetland HRU is always moved to the bottom of the landuse.lum table ( makes it
+#' easier for following functions to identify the employed land use).
 #'
+#' @param luse_lum landuse.lum input table.
+#' @param hru_hru hru-data.hru input table.
+#' @param lu_mgt_sel Selected land use which should be employed for the wetland.
+#'   (User defined in the wetlands definition table or NA if not set)
+#' @param hru_id HRU IDs to which surface water storage (wetland) will be added.
+#' @param hru_id_chr HRU IDs to which surface water storage (wetland) will be
+#'   added. The input is character with leading zeros.
 #'
-#' @param con_tbl A SWAT+ .con input table (connectivity)
-#' @param hru_ids Numeric vector of HRU IDs which will be replaced by ponds.
+#' @returns Updated landuse.lum input table.
 #'
-#' @returns A tibble with the objects for which the connectivities must be
-#'   changed. The table has the following columns:
-#'
-#'   - `obj_id` ID of the object for which the connectivity must be changes
-#'   - `id` ID of the HRU which will be replaced by pond
-#'   - `con_id` ID of the connectivity in the connectivity table which must be
-#'     changed.
-#'
-#' @importFrom dplyr arrange filter mutate select %>%
-#' @importFrom purrr map map_df set_names
+#' @importFrom dplyr bind_rows filter mutate %>%
 #' @importFrom stringr str_remove
-#' @importFrom tidyselect ends_with
+#' @importFrom tibble tibble
 #'
 #' @keywords internal
 #'
-get_chg_ids_pond <- function(con_tbl, hru_ids) {
-  n_con <- as.integer(str_remove(names(con_tbl)[ncol(con_tbl)], 'frac_'))
+update_lum_wetl <- function(luse_lum, hru_hru, lu_mgt_sel, hru_id, hru_id_chr) {
+  if(is.na(lu_mgt_sel)) {
+    lu_mgt_sel <- hru_hru$lu_mgt[hru_hru$id == hru_id]
+  }
+  lum_i_name <- lu_mgt_sel %>%
+    str_remove(., '_lum$') %>%
+    str_remove(., '_drn$') %>%
+    paste0(., '_wet')
 
-  con_ids <- map(1:n_con, ~ select(con_tbl, id, ends_with(paste0('_', .x)))) %>%
-    map_df(., ~ set_names(.x,
-                          c('id', 'obj_typ', 'obj_id', 'hyd_typ', 'frac'))) %>%
-    arrange(id) %>%
-    mutate(con_id = rep(1:n_con, nrow(con_tbl)))
+  if(lum_i_name %in% luse_lum$name) {
+    id_i <- which(luse_lum$name == lum_i_name)
+    ids  <- 1:nrow(luse_lum)
+    luse_lum <- luse_lum[c(ids[ids!=id_i], id_i), ]
+  } else {
+    lum_i_upd <- luse_lum %>%
+      filter(., name == lu_mgt_sel) %>%
+      mutate(.,
+             tile = 'null',
+             name = lum_i_name)
+    luse_lum <- bind_rows(luse_lum, lum_i_upd)
+  }
 
-  con_chg <- map_df(hru_ids,
-                    ~ filter(con_ids, obj_typ == 'ru' & obj_id == .x)) %>%
-    select(obj_id, id, con_id)
+  return(luse_lum)
+}
 
-  return(con_chg)
+#' Update the hru-data.hru input table.
+#'
+#' The new landuse pointer to the entry in landuse.lum and the pointer to the
+#' pointer to the now surface storage in wetland.wet are added to the HRU
+#'
+#' @param hru_hru hru-data.hru input table.
+#' @param lum_i_name Name of the land use in landuse.lum which is implemented
+#'   for the wetland.
+#' @param hru_id HRU IDs to which surface water storage (wetland) will be added.
+#' @param hru_id_chr HRU IDs to which surface water storage (wetland) will be
+#'   added. The input is character with leading zeros.
+#'
+#' @returns Updated hru-data.hru input table.
+#'
+#' @keywords internal
+#'
+update_hru_hru_wetl <- function(hru_hru, lum_i_name, hru_id, hru_id_chr) {
+  hru_hru$surf_stor[hru_hru$id == hru_id] <- paste0('wet', hru_id_chr)
+  hru_hru$lu_mgt[hru_hru$id == hru_id] <- lum_i_name
+  return(hru_hru)
 }
 
 #' Update the rout_unit.con input table.
 #'
-#' All connections of land objects which initially routed into the replaced land
-#' object (HRU) are replaced by a connection into the newly generated reservoir.
-#' For all connections of the replaced land object the fractions are set to 0.
-#' To elimiate the effect of e.g. ET from that object its area is set to the
-#' minimum value (0.00001).
+#' If the new wetland should route directly into a channel instead of routing
+#' into its neighboring spatial object, or if the HRU has tile drainage which
+#' should be removed then the rout_unit.con is updated accordingly. In the case
+#' of routing into a channel all connections (except aquifer recharge), are
+#' removed for the wetland HRU and are replaced by a connection to the channel
+#' with the ID `to_cha_id`. In the case of tile drainage only the tile flow
+#' connectivity is removed.
 #'
 #' @param rtu_con rout_unit.con input table.
-#' @param rtu_con_chg Lookup table for which connectivities must be changed.
-#' @param hru_id ID of the HRU which is replaced by a pond.
-#' @param res_id New ID of the pond (reservoir) which replaces the land object.
+#' @param to_cha_id ID of the channel into which all water should be routed.
+#' @param has_drn Boolean. Does the HRU have tile drainage or not?
+#' @param hru_id HRU IDs to which surface water storage (wetland) will be added.
 #'
 #' @returns Updated rout_unit.con table.
 #'
-#' @importFrom dplyr filter
-#'
 #' @keywords internal
 #'
-update_rtu_con_pond <- function(rtu_con, rtu_con_chg, hru_id, res_id) {
-  chg_i <- filter(rtu_con_chg, obj_id == hru_id)
-
-  if(nrow(chg_i) > 0) {
-    for (i in 1:nrow(chg_i)) {
-      # Change object type from routing unit to reservoir (= land to pond)
-      rtu_con[rtu_con$id == chg_i$id[i],
-              paste0('obj_typ_', chg_i$con_id[i])] <- 'res'
-
-      # Replace the initial land ID with the new reservoir ID
-      rtu_con[rtu_con$id == chg_i$id[i],
-              paste0('obj_id_', chg_i$con_id[i])] <- res_id
-    }
-
-    # Set all fractions for connections from the replaced object to 0
-    rtu_con[rtu_con$id == hru_id,
-            paste0('frac_', 1:((ncol(rtu_con)-13)/4))] <- 0
-
-    #Set area of replaced object to minimum value
-    rtu_con[rtu_con$id == hru_id, ]$area <- 0.00001
+update_rtu_con_wetl <- function(rtu_con, to_cha_id, has_drn, hru_id) {
+  if(!is.na(to_cha_id)) {
+    rtu_con <- remove_connection(rtu_con, hru_id,
+                                 hyd_typ_rmv = c('tot', 'sur', 'lat', 'til'))
+    rtu_con <- add_connection(rtu_con, hru_id,
+                              obj_typ_add = 'sdc', obj_id_add = to_cha_id,
+                              hyd_typ_add = 'tot', frac_add = 1)
+  } else if(has_drn) {
+    rtu_con <- remove_connection(rtu_con, hru_id, hyd_typ_rmv = 'til')
   }
 
   return(rtu_con)
@@ -284,109 +323,175 @@ update_rtu_con_pond <- function(rtu_con, rtu_con_chg, hru_id, res_id) {
 
 #' Update the chandeg.con input table.
 #'
-#' For the channels which should now route into the new reservoir replace all
-#' connections which the channels initially had and add the connection to the
-#' new reservoir.
+#' In the case channel objects should be rerouted into the new wetland then the
+#' chandeg.con input file must be updated. For the channel which is rerouted
+#' into the wetland all connections are removed and the connection to the
+#' wetland is added.
 #'
-#' @param cha_con chandeg.con input table
-#' @param from_cha_id Vector of IDs for the channels which should be routed to
-#'   the new reservoir.
-#' @param res_id New ID of the pond (reservoir) which replaces the land object.
+#' @param cha_con chandeg.con input table.
+#' @param from_cha_id Vector of channel IDs which should be routed into the new
+#'   wetland.
+#' @param hru_id HRU IDs to which surface water storage (wetland) will be added.
 #'
-#' @returns Updated chandeg.con input table.
+#' @returns Updated chandeg.con table.
 #'
 #' @keywords internal
 #'
-update_cha_con_pond <- function(cha_con, from_cha_id, res_id) {
-  # Get the maximum number of connections in chandeg.con
-  n_con <- (ncol(cha_con)-13)/4
-
-  # Rewrite the first (and only) connection of the channels
-  # which are now fully routed into the new reservoir.
-  cha_con[cha_con$id %in% from_cha_id,]$out_tot <- 1L
-  cha_con[cha_con$id %in% from_cha_id,]$obj_typ_1 <- 'res'
-  cha_con[cha_con$id %in% from_cha_id,]$obj_id_1 <- res_id
-  cha_con[cha_con$id %in% from_cha_id,]$frac_1 <- 1.0
-
-  # Delete all other connections which of the channels which are now
-  # routed into the reservoir.
-  cha_con[cha_con$id %in% from_cha_id,14 + 4*(1:(n_con-1))] <- ''
-  cha_con[cha_con$id %in% from_cha_id,15 + 4*(1:(n_con-1))] <- NA
-  cha_con[cha_con$id %in% from_cha_id,16 + 4*(1:(n_con-1))] <- ''
-  cha_con[cha_con$id %in% from_cha_id,17 + 4*(1:(n_con-1))] <- NA
+update_cha_con_wetl <- function(cha_con, from_cha_id, hru_id) {
+  for(cha_i in from_cha_id) {
+    cha_con <- remove_connection(cha_con, from_cha_id, hyd_typ_rmv = 'tot')
+    cha_con <- add_connection(cha_con, from_cha_id,
+                              obj_typ_add = 'ru', obj_id_add = hru_id,
+                              hyd_typ_add = 'tot', frac_add = 1,
+                              position = 1)
+  }
 
   return(cha_con)
 }
 
-#' Update the reservoir.con input table.
+#' Remove connections from a connectivity input table.
 #'
-#' Take the properties of the routing unit (area, lat, lon, elev...) and use
-#' them for the newly generated reservoir. Add those properties as a new line
-#' in reservoir.con and add the connection to the channel.
+#' Remove all connections which route either into a certain object type
+#' (`obj_typ_rmv`) or which are of a certain hydrological type (`hyd_typ_rmv`).
+#' The connections are removed for the entry with the ID `id_i`.
 #'
-#' @param res_con reservoir.con input table
-#' @param rtu_con rout_unit.con input table.
-#' @param hru_id ID of the HRU which is replaced by a pond.
-#' @param to_cha_id ID of channel to which water from reservoir is routed.
-#' @param res_id New ID of the pond (reservoir) which replaces the land object.
+#' @param obj_con The object connectivity input table
+#' @param id_i Object ID for which connections should be removed.
+#' @param obj_typ_rmv Vector of object types into which the object with `id_i`
+#'   routes and which should be removed.
+#' @param hyd_typ_rmv Vector of hydrological flow types into the object with
+#'   `id_i` routes and which should be removed.
 #'
-#' @returns Updated reservoir.con input table with new line for the new
-#'   reservoir.
+#' @returns The updated connectivity input table.
 #'
-#' @importFrom dplyr bind_rows filter mutate select %>%
+#' @importFrom dplyr bind_cols filter group_by mutate select ungroup %>%
+#' @importFrom tibble add_row
+#' @importFrom tidyr pivot_longer pivot_wider
 #'
 #' @keywords internal
 #'
-update_res_con_pond <- function(res_con, rtu_con, hru_id, to_cha_id, res_id) {
-  rtu_to_res <- rtu_con %>%
-    filter(., id == hru_id) %>%
-    select(., id:out_tot) %>%
-    mutate(id = res_id,
-           name = paste0('pnd', hru_id),
-           obj_id = id,
-           out_tot = 1L,
-           obj_typ_1 = 'sdc',
-           obj_id_1 = to_cha_id,
-           hyd_typ_1 = 'tot',
-           frac_1 = 1.0)
+remove_connection <- function(obj_con, id_i,
+                              obj_typ_rmv = NULL, hyd_typ_rmv = NULL) {
+  obj_i <- obj_con %>%
+    filter(id == id_i) %>%
+    select(id:out_tot)
 
-  res_con <- bind_rows(res_con, rtu_to_res)
+  cons_i <- obj_con %>%
+    filter(id == id_i) %>%
+    select(obj_typ_1:ncol(.)) %>%
+    pivot_longer(.,
+                 cols = obj_typ_1:ncol(.),
+                 names_to = c('.value', 'i'),
+                 names_pattern = "(.*)_(.*)")
 
-  return(res_con)
+  n_el <- nrow(cons_i)
+
+  if (!is.null(obj_typ_rmv)) {
+    cons_i <- filter(cons_i, !obj_typ %in% obj_typ_rmv)
+  }
+  if (!is.null(hyd_typ_rmv)) {
+    cons_i <- filter(cons_i, !hyd_typ %in% hyd_typ_rmv)
+  }
+
+  n_rmv <- n_el - nrow(cons_i)
+
+  cons_i <- cons_i %>%
+    add_row(., obj_typ = rep('', n_rmv), hyd_typ = rep('', n_rmv)) %>%
+    mutate(., i = 1:nrow(.)) %>%
+    group_by(hyd_typ) %>%
+    mutate(frac = frac/sum(frac)) %>%
+    ungroup(.) %>%
+    pivot_wider(.,
+                names_from = i,
+                values_from = c('obj_typ', 'obj_id', 'hyd_typ', 'frac'),
+                names_sep = '_') %>%
+    select(., paste0(c('obj_typ_', 'obj_id_', 'hyd_typ_', 'frac_'),
+                     rep(1:n_el, each = 4)))
+  obj_con_i <- bind_cols(obj_i, cons_i) %>%
+    mutate(out_tot = out_tot - n_rmv)
+
+  obj_con[id_i,] <- obj_con_i
+
+  return(obj_con)
 }
 
-
-
-#' Update the hru.con input table.
+#' Add a connection to a connectivity input table.
 #'
-#' To remove HRU from land process calculations the area is set to the minimum
-#' value of 0.00001.
+#' @param obj_con The object connectivity input table
+#' @param obj_typ_add Object type of the newly added connection
+#' @param obj_id_add Object id into which the newly added connection is routed.
+#' @param hyd_typ_add Type of hydrological flux of the newly added connection.
+#' @param frac_add Flow fraction of the newly added connection (will be
+#'   normalized to 1 in case the fractions sum with existing fluxes do not add
+#'   up to 1).
+#' @param position Position in the input table where the new connection is
+#'   added.
 #'
-#' @param hru_con hru.con input table.
-#' @param hru_id ID of the HRU which is replaced by a pond.
+#' @returns The updated connectivity input table.
 #'
-#' @returns Updated hru.con input table.
-#'
-#' @keywords internal
-#'
-update_hru_con_pond <- function(hru_con, hru_id) {
-  hru_con[hru_con$id == hru_id, ]$area <- 0.00001
-  return(hru_con)
-}
-
-#' Update the object.cnt input table.
-#'
-#' The total object count and the count of reservoirs are increased by one.
-#'
-#' @param obj_cnt object.cnt input table.
-#'
-#' @returns Updated object.cnt input table.
+#' @importFrom dplyr bind_cols filter group_by mutate select ungroup %>%
+#' @importFrom tibble add_row
+#' @importFrom tidyr pivot_longer pivot_wider
 #'
 #' @keywords internal
 #'
-update_obj_cnt_pond <- function(obj_cnt) {
-  obj_cnt$obj <- obj_cnt$obj + 1
-  obj_cnt$res <- obj_cnt$res + 1
+add_connection <- function(obj_con, id_i, obj_typ_add, obj_id_add, hyd_typ_add,
+                           frac_add, position = Inf) {
+  obj_i <- obj_con %>%
+    filter(id == id_i) %>%
+    select(id:out_tot)
 
-  return(obj_cnt)
+  cons_i <- obj_con %>%
+    filter(id == id_i) %>%
+    select(obj_typ_1:ncol(.)) %>%
+    pivot_longer(.,
+                 cols = obj_typ_1:ncol(.),
+                 names_to = c('.value', 'i'),
+                 names_pattern = "(.*)_(.*)") %>%
+    mutate(i = as.integer(i))
+
+  n_el <- nrow(cons_i)
+  cons_i <- filter(cons_i, obj_typ != '')
+  position <- max(min(position, nrow(cons_i)), 1)
+
+  n_na <- n_el - 1 - nrow(cons_i)
+
+  if (n_na >= 0) {
+    cons_i <- cons_i %>%
+      add_row(., obj_typ = obj_typ_add, obj_id = obj_id_add,
+                 hyd_typ = hyd_typ_add, frac = frac_add,
+                 .before = position) %>%
+      add_row(., obj_typ = rep('', n_na), hyd_typ = rep('', n_na))
+  } else {
+    cons_i <- cons_i %>%
+      add_row(., obj_typ = obj_typ_add, obj_id = obj_id_add,
+                 hyd_typ = hyd_typ_add, frac = frac_add,
+                 .before = position)
+
+    n_el <- n_el + 1
+
+    obj_con[paste0('obj_typ_', n_el)] <- NA_character_
+    obj_con[paste0('obj_id_',  n_el)] <- NA_integer_
+    obj_con[paste0('hyd_typ_', n_el)] <- NA_character_
+    obj_con[paste0('frac_',    n_el)] <- NA_real_
+  }
+
+  cons_i <- cons_i %>%
+    mutate(i = 1:nrow(.)) %>%
+    group_by(hyd_typ) %>%
+    mutate(frac = frac/sum(frac)) %>%
+    ungroup(.) %>%
+    pivot_wider(.,
+                names_from = i,
+                values_from = c('obj_typ', 'obj_id', 'hyd_typ', 'frac'),
+                names_sep = '_') %>%
+    select(., paste0(c('obj_typ_', 'obj_id_', 'hyd_typ_', 'frac_'),
+                     rep(1:(n_el), each = 4)))
+
+  obj_con_i <- bind_cols(obj_i, cons_i) %>%
+    mutate(out_tot = out_tot + 1)
+
+  obj_con[id_i,] <- obj_con_i
+
+  return(obj_con)
 }

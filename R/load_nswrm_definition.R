@@ -94,6 +94,24 @@ load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
          paste(nswrm_loc$id[id_no_obj], collapse = ', '))
   }
 
+  hru_pond_ids <- unique(unlist(nswrm_loc$obj_id[nswrm_loc$type == 'pond']))
+  hru_pond_def_miss <- ! hru_pond_ids %in% nswrm_defs$pond$hru_id
+
+  if(any(hru_pond_def_miss)) {
+    stop("Pond locations ('obj_id's) were defined ",
+         "for which a definition in the pond setting input file was missing:\n",
+         paste(hru_pond_ids[hru_pond_def_miss], collapse = ', '))
+  }
+
+  hru_wetl_ids <- unique(unlist(nswrm_loc$obj_id[nswrm_loc$type == 'wetland']))
+  hru_wetl_def_miss <- ! hru_wetl_ids %in% nswrm_defs$wetland$hru_id
+
+  if(any(hru_wetl_def_miss)) {
+    stop("Wetland locations ('obj_id's) were defined ",
+         "for which a definition in the wetland setting input file was missing:\n",
+         paste(hru_wetl_ids[hru_wetl_def_miss], collapse = ', '))
+  }
+
   nswrm_defs$nswrm_locations <- nswrm_loc
 
   return(nswrm_defs)
@@ -416,6 +434,9 @@ load_water_def <- function(file_path, swat_inputs, type) {
 
   # Initialization and checks of input table columns
   def_tbl <- check_settings_column(def_tbl, 'hru_id', 'integer', 'all')
+  if (type == 'wetland') {
+    def_tbl <- check_settings_column(def_tbl, 'lu_mgt', 'character', 'all')
+  }
   def_tbl <- check_settings_column(def_tbl, 'cha_to_id', 'integer', type)
   if (!'cha_from_id' %in% names(def_tbl)) {
     def_tbl <- mutate(def_tbl, cha_from_id = NA_integer_)
@@ -438,15 +459,18 @@ load_water_def <- function(file_path, swat_inputs, type) {
   def_tbl <- check_settings_column(def_tbl, 'sed', 'character', 'all')
   def_tbl <- check_settings_column(def_tbl, 'nut', 'character', 'all')
 
-  def_tbl <- select(def_tbl, hru_id, cha_to_id, cha_from_id,
+  def_tbl <- select(def_tbl, hru_id, any_of('lu_mgt'), cha_to_id, cha_from_id,
                     all_of(hyd_par_names), rel, sed, nut)
 
   hru_id_na <- is.na(def_tbl$hru_id)
   is_no_hru_id    <- ! def_tbl$hru_id %in% swat_inputs$hru_data.hru$id
   if(type == 'pond') {
+    is_no_lu_mgt <- FALSE
     cha_id_na <- is.na(def_tbl$cha_to_id)
     is_no_cha_to_id <- ! def_tbl$cha_to_id %in% swat_inputs$chandeg.con$id
   } else {
+    is_no_lu_mgt <- ! (def_tbl$lu_mgt %in% swat_inputs$landuse.lum$name |
+                         is.na(def_tbl$lu_mgt))
     cha_id_na <- FALSE
     is_no_cha_to_id <- ! (def_tbl$cha_to_id %in% swat_inputs$chandeg.con$id |
                           is.na(def_tbl$cha_to_id))
@@ -460,7 +484,7 @@ load_water_def <- function(file_path, swat_inputs, type) {
   is_no_nut_name  <- ! (def_tbl$nut %in% swat_inputs$nutrients.res$name |
                         is.na(def_tbl$nut))
 
-  if (any(c(hru_id_na, cha_id_na, is_no_hru_id,
+  if (any(c(hru_id_na, is_no_lu_mgt, cha_id_na, is_no_hru_id,
             is_no_cha_to_id, is_no_cha_fr_id,
             is_no_rel_name, is_no_sed_name,
             is_no_nut_name))) {
@@ -482,6 +506,13 @@ load_water_def <- function(file_path, swat_inputs, type) {
                paste(which(is_no_hru_id), collapse = ', '), '\n')
     } else {
       no_hru_msg <- ''
+    }
+    if(any(is_no_lu_mgt)) {
+      no_lum_msg <-
+        paste0("Row IDs where 'lu_mgt' is not defined in landuse.lum: ",
+                           paste(which(is_no_lu_mgt), collapse = ', '), '\n')
+    } else {
+      no_lum_msg <- ''
     }
     if(any(is_no_cha_to_id)) {
       no_cha_to_msg <-
@@ -521,16 +552,22 @@ load_water_def <- function(file_path, swat_inputs, type) {
 
     stop('The following issues where identified for the rows of the pond ',
          'definition input table: \n\n',
-         hru_na_msg, cha_na_msg, no_hru_msg, no_cha_to_msg, no_cha_fr_msg,
+         hru_na_msg, cha_na_msg, no_hru_msg, no_lum_msg,
+         no_cha_to_msg, no_cha_fr_msg,
          no_rel_name_msg, no_sed_name_msg, no_nut_name_msg,
          '\n\nPlease fix the reported issues in the .csv file and reload it.')
   }
 
   hru_area <- select(swat_inputs$hru.con, id, area)
-  rel_dflt <- ifelse('drawdown_days' %in% swat_inputs$res_rel.dtl_names,
-                     'drawdown_days',
-                     'null')
+
+  rel_pond_dflt <- ifelse('drawdown_days' %in% swat_inputs$res_rel.dtl_names,
+                          'drawdown_days',
+                          'null')
+  rel_wetl_dflt <- ifelse('wetland' %in% swat_inputs$res_rel.dtl_names,
+                          'wetland',
+                          'null')
   type_lbl <- ifelse(type == 'pond', 'res', 'wet')
+  rel_dflt <- ifelse(type == 'pond',rel_pond_dflt, rel_wetl_dflt)
   sed_dflt <- ifelse(paste0('sed', type_lbl, 1) %in% swat_inputs$sediment.res$name,
                      paste0('sed', type_lbl, 1),
                      'null')
@@ -647,10 +684,10 @@ get_mgt_short_labels <- function(mgt_labels) {
 #'
 #' @param tbl Settings table.
 #' @param col_name Name of column which is checked and/or coerced.
-#' @param val_class Class which data should have (e.g. character, interger, or numeric).
+#' @param val_class Class which data should have (e.g. character, integer, or numeric).
 #' @param measr_type Type of measure, either pond, wetland or all.
 #'
-#' @@returns The input table with data type coerced to val_class if necessary.
+#' @returns The input table with data type coerced to val_class if necessary.
 #'
 #' @keywords internal
 #'

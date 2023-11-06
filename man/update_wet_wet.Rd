@@ -2,39 +2,26 @@
 % Please edit documentation in R/implement_wetland.R
 \name{update_wet_wet}
 \alias{update_wet_wet}
-\title{Update the reservoir.res input table.}
+\title{Update the wetland.wet input table.}
 \usage{
-update_wet_wet(hyd_wet, hyd_res_pnd, hru_id, area)
-
-update_wet_wet(hyd_wet, hyd_res_pnd, hru_id, area)
+update_wet_wet(wet_wet, wet_wet_i, hru_id_chr)
 }
 \arguments{
-\item{hyd_res_pnd}{hydrology.res parameters table for added pond.}
+\item{wet_wet}{wetland.wet input table}
 
-\item{hru_id}{ID of the HRU which is replaced by a pond.}
+\item{wet_wet_i}{Table with rel, sed, and nut pointers for added pond.}
 
-\item{area}{Area of the replaced land object in ha.}
-
-\item{res_res}{reservoir.res input table}
-
-\item{res_res_pnd}{table with rel, sed, and nut pointers for added pond.}
-
-\item{hyd_res}{hydrology.res input table.}
+\item{hru_id_chr}{HRU IDs to which surface water storage (wetland) will be
+added. The input is character with leading zeros.}
 }
 \value{
-Updated reservoir.res input table.
-
-Updated hydrology.res input table.
+Updated wetland.wet input table.
 }
 \description{
-Add a new line in the reservoir.res table with the ID and name of the new
-reservoir. Only the hydrology column \code{hyd} and the ID are updated. The other
-pointers are set to the default entries (currently the case for all
-reservoirs).
-
-Hydrology parameters for the new reservoir are added to hydrology.res.
-Most of the parameters are default for all reservoirs. Default the area and
-volume parameters are simple functions of the area. The area is the same as
-the replaced land object.
+Add a new line in the wetland.wet table. The name of the added entry is 'wet'
+and the HRU ID. The wetland is initialized with the default 'initwet1'. The
+pointer to the right entry in hydrology.wet is initialized ('hydwet' + HRU
+ID). The (user defined) pointers to release, sediments, and nutrients are
+added.
 }
 \keyword{internal}

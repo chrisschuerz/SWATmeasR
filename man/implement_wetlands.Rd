@@ -2,60 +2,63 @@
 % Please edit documentation in R/implement_wetland.R
 \name{implement_wetlands}
 \alias{implement_wetlands}
-\title{Implement ponds by replacing land objects.}
+\title{Implement wetlands by adding surface storage to land objects and removing
+existing drainage.}
 \usage{
 implement_wetlands(
   swat_inputs,
   hru_id,
   to_cha_id,
   from_cha_id,
-  res_wet,
-  hyd_wet
+  lu_mgt_sel,
+  wet_wet_sel,
+  hyd_wet_sel
 )
 }
 \arguments{
 \item{swat_inputs}{List with SWAT+ input files.}
 
-\item{hru_id}{HRU IDs which will be replaced by ponds.
+\item{hru_id}{HRU IDs to which surface water storage (wetland) will be added.
 
 The input can be a single numeric value to replace a single HRU, or a
-vector of numeric values if multiple HRUs should be replaced by ponds.}
+vector of numeric values if multiple HRUs are modified.}
 
-\item{to_cha_id}{Channel IDs into which implemented ponds route water.
+\item{to_cha_id}{(Optional) channel IDs into which water from wetland is
+routed. (all water from that HRU is then routed into the defined channel
+instead of the initially defined neighouring hydrological objects)
 
 The input can be a single numeric value or a vector of values. \code{to_cha_id}
 must be the same length as \code{hru_id}. Each channel ID corresponds to the
 respective \code{hru_id}.}
 
-\item{from_cha_id}{Channel IDs which send water to the implemented
-ponds.}
-
-\item{res_res_pnd}{Table with rel, sed and nut pointers for the added ponds.
-ponds.}
-
-\item{hyd_res_pnd}{Table with hydrology.res parameters for the added ponds.
+\item{from_cha_id}{(Optional) channel IDs which send water to the wetlands.
 
 The input is default \code{NA}. Then the channel routing remains unchanged.
-Multiple channels can be rerouted into a pond. If \code{hru_id} is a single
+Multiple channels can be rerouted into a wetland. If \code{hru_id} is a single
 value \code{from_cha_id} can be a single numeric value to reroute one channel,
-or a vector to reroute multiple channels into the implemented pond. If
-\code{hru_id} is a vector, \code{from_cha_id} must be a list with the same length, as
-\code{hru_id}. If for a respective \code{hru_id} no channels should be rerouted that
-list element is \code{NA}, otherwise the list element can be a value or a
-vector.}
+or a vector to reroute multiple channels. If \code{hru_id} is a vector,
+\code{from_cha_id} must be a list with the same length, as \code{hru_id}. If for a
+respective \code{hru_id} no channels should be rerouted that list element is
+\code{NA}, otherwise the list element can be a value or a vector.}
+
+\item{wet_wet_sel}{Table with rel, sed and nut pointers for the added
+wetlands. The pointers will be written into wetlands.wet}
+
+\item{hyd_wet_sel}{Table with hydrology.wet parameters for the implemented
+wetlands.}
 }
 \value{
 The \code{swat_inputs} list with updated input tables which include all
-necessary changes to replace land objects by ponds.
+necessary changes to add surface water storage to HRUs and remove tile
+flow.
 }
 \description{
-The land objects defined by the \code{hru_id} are assigned an area of (almost) 0.
-The connection fractions for those land objects are set to 0. Reservoirs with
-the same area/lat/long/elev are generated (at the moment with default
-reservoir dimensions) are implemented in the reservoir input files. All land
-objects which initially routed water to the land objects with \code{hru_id} now
-route water to the new reservoirs. The new reservoirs must route water to one
-channel each defined with \code{to_cha_id}. Optionally a \code{from_cha_id} can be
-defined if channels should be rerouted into the new reservoir.
+Surface storage is added to the land objects defined by the \code{hru_id}, by
+parameterizing a wetland in \code{wetland.wet} and \code{hydrology.wet} and adding this
+wetland as surface storage in \code{hru-data.hru}. If an HRU was drained, the
+drainage is removed and a new entry in \code{landuse.lum} is generated for that
+HRU. Optionally, a \code{to_cha_id} or \code{from_cha_id} can be defined if channels
+should be rerouted into the wetland or the water from wetlands should be
+routed directly into a channel.
 }
 \keyword{internal}

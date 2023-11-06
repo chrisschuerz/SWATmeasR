@@ -11,9 +11,12 @@ check_settings_column(tbl, col_name, val_class, measr_type)
 
 \item{col_name}{Name of column which is checked and/or coerced.}
 
-\item{val_class}{Class which data should have (e.g. character, interger, or numeric).}
+\item{val_class}{Class which data should have (e.g. character, integer, or numeric).}
 
 \item{measr_type}{Type of measure, either pond, wetland or all.}
+}
+\value{
+The input table with data type coerced to val_class if necessary.
 }
 \description{
 Check columns and types of data for settings input table.
