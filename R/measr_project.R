@@ -90,7 +90,7 @@ measr_project <- R6Class(
       #'   parametrisations, and `'nut'` for nutrients.res parametrisations can
       #'   be defined.
       #' - `'wetland'`: A pond definition table includes all definitions for
-      #'   pond locations. The `pond` table must provide the columns `hru_id`.
+      #'   pond locations. The `wetland` table must provide the columns `hru_id`.
       #'   Optionally, water from channels can be routed into a wetland. And
       #'   the wetland's connectivity can be changed to a channel. In that case
       #'   `to_cha_id`, and `from_cha_id` must be defined. The hydrology.wet
