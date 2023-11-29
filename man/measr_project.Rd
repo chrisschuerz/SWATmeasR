@@ -122,7 +122,7 @@ for \code{'rel'} (release decision table), \code{'sed'} for sediment.res
 parametrisations, and \code{'nut'} for nutrients.res parametrisations can
 be defined.
 \item \code{'wetland'}: A pond definition table includes all definitions for
-pond locations. The \code{pond} table must provide the columns \code{hru_id}.
+pond locations. The \code{wetland} table must provide the columns \code{hru_id}.
 Optionally, water from channels can be routed into a wetland. And
 the wetland's connectivity can be changed to a channel. In that case
 \code{to_cha_id}, and \code{from_cha_id} must be defined. The hydrology.wet

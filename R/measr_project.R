@@ -50,7 +50,7 @@ measr_project <- R6Class(
     #'
     initialize = function(project_name, project_path) {
       if(file.exists(paste0(project_path, '/', project_name,".measr"))){
-        stop("measR project allready exists in", project_path)
+        stop("measR project already exists in", project_path)
       }
 
       self$.data$meta$project_name <- project_name
