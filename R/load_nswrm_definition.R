@@ -159,7 +159,7 @@ load_nswrm_def <- function(file_path, type, nswrm_defs, swat_inputs, overwrite) 
   #        "Load the NSWRM location table with measr_object$load_nswrm_location()",
   #        " before you load the NSWRM definitions.")
   # }
-
+  nswrm_defs_names <- names(nswrm_defs)
   # If nswrm_defs does not exist yet generate empty list
   if(is.null(nswrm_defs)) {
     nswrm_defs <- list()
@@ -214,7 +214,7 @@ load_nswrm_def <- function(file_path, type, nswrm_defs, swat_inputs, overwrite) 
                                                    overwrite)
   }
 
-  if(type %in% names(nswrm_defs) & overwrite) {
+  if(type %in% nswrm_defs_names & overwrite) {
     warning("NSWRM definition table for '", type, "' will be overwritten!\n",
             'This also requires to reload the NSWRM location table if it was ',
             'already loaded before')
@@ -560,14 +560,16 @@ load_water_def <- function(file_path, swat_inputs, type) {
 
   hru_area <- select(swat_inputs$hru.con, id, area)
 
-  rel_pond_dflt <- ifelse('drawdown_days' %in% swat_inputs$res_rel.dtl_names,
-                          'drawdown_days',
-                          'null')
-  rel_wetl_dflt <- ifelse('wetland' %in% swat_inputs$res_rel.dtl_names,
-                          'wetland',
-                          'null')
+  if(type == 'pond') {
+    rel_dflt <- ifelse('drawdown_days' %in% swat_inputs$res_rel.dtl_names,
+                       'drawdown_days',
+                       'null')
+  } else {
+    rel_dflt <- ifelse('wetland' %in% swat_inputs$res_rel.dtl_names,
+                       'wetland',
+                       'null')
+  }
   type_lbl <- ifelse(type == 'pond', 'res', 'wet')
-  rel_dflt <- ifelse(type == 'pond',rel_pond_dflt, rel_wetl_dflt)
   sed_dflt <- ifelse(paste0('sed', type_lbl, 1) %in% swat_inputs$sediment.res$name,
                      paste0('sed', type_lbl, 1),
                      'null')
