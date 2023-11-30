@@ -267,9 +267,12 @@ load_luse_def <- function(file_path, swat_inputs) {
     luse_def$lum_dtl <- '::keep::'
   }
 
-  # %>%
-  #   map_df(., ~replace_na(.x, '::keep::'))
-
+  dtl_names <- luse_def$lum_dtl %>%
+    str_remove_all(., 'c\\(|\\)') %>%
+    str_split(., ',') %>%
+    unlist(.) %>%
+    str_trim(.) %>%
+    unique(.)
 
   # Checks for all inputs if they are available in the respective SWAT+ input
   # files
@@ -283,9 +286,13 @@ load_luse_def <- function(file_path, swat_inputs) {
     c(swat_inputs$cons_practice.lum$name, 'null', '::keep::')
   lum_ovn_miss  <- !luse_def$ov_mann %in%
     c(swat_inputs$ovn_table.lum$name, 'null', '::keep::')
+  lum_tile_miss  <- !luse_def$tile %in%
+    c(swat_inputs$tiledrain.str$name, 'null', '::keep::')
+  lum_dtl_miss  <- !dtl_names %in%
+    c(swat_inputs$lum.dtl_names, 'null', '::keep::')
 
   if (any(c(lum_plnt_miss, lum_mgt_miss, lum_cn2_miss,
-            lum_cpr_miss, lum_ovn_miss))) {
+            lum_cpr_miss, lum_ovn_miss, lum_tile_miss, lum_dtl_miss))) {
     if(any(lum_plnt_miss)) {
       plnt_msg <- paste0("'plnt_com' not defined in 'plant.ini': ",
                          paste(unique(luse_def$plnt_com[lum_plnt_miss]),
@@ -321,10 +328,24 @@ load_luse_def <- function(file_path, swat_inputs) {
     } else {
       ovn_msg  <- ''
     }
+    if(any(lum_tile_miss)) {
+      tile_msg  <- paste0("'tile' not defined in 'tiledrain.str': ",
+                         paste(unique(luse_def$tile[lum_tile_miss]),
+                               collapse = ', '), '\n')
+    } else {
+      tile_msg  <- ''
+    }
+    if(any(lum_dtl_miss)) {
+      dtl_msg  <- paste0("Operation schedules not defined in 'lum.dtl': ",
+                         paste(unique(dtl_names[lum_dtl_miss]),
+                               collapse = ', '), '\n')
+    } else {
+      dtl_msg  <- ''
+    }
 
     stop('The following options are not defined in the respective SWAT+ input ',
          'files: \n\n',
-         plnt_msg, sch_msg, cn2_msg, cpr_msg, ovn_msg,
+         plnt_msg, sch_msg, cn2_msg, cpr_msg, ovn_msg, tile_msg, dtl_msg,
          '\n\nPlease do the following to solve this issue:\n',
          'i)   Add the missing entries in the SWAT+ input files\n',
          "ii)  Reload all SWAT+ input files with ",

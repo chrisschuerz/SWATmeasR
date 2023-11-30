@@ -173,6 +173,8 @@ add_dtl_op <- function(swat_inputs, hru_id, op_names) {
     unlist(.) %>%
     str_trim(.)
 
+  op_names <- op_names[!op_names %in% c('::keep::', 'null')]
+
   n_op <- length(op_names)
 
   for (hru_i in hru_id) {

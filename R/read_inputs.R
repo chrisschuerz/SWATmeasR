@@ -69,7 +69,8 @@ read_swat_inputs <- function(project_path) {
     sediment.res      = read_tbl(paste0(project_path, '/sediment.res')),
     nutrients.res     = read_tbl(paste0(project_path, '/nutrients.res')),
     res_rel.dtl_names = read_dtl_names(paste0(project_path, '/res_rel.dtl')),
-    lum.dtl_names     = read_dtl_names(paste0(project_path, '/lum.dtl'))
+    lum.dtl_names     = read_dtl_names(paste0(project_path, '/lum.dtl')),
+    tiledrain.str     = read_tbl(paste0(project_path, '/tiledrain.str'))
   )
 
   file_names <- names(input_list)
