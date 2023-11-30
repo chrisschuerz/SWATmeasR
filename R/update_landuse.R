@@ -47,11 +47,11 @@
 #' @returns The SWAT+ input tables list with the updated landuse.lum and
 #'   hru-data.hru input tables.
 #'
-#' @importFrom dplyr select %>%
-#' @importFrom purrr map map_df map_lgl
+#' @importFrom dplyr bind_rows cur_group_id distinct filter group_by left_join mutate select %>%
+#' @importFrom purrr map map_df map_lgl set_names
 #' @importFrom stringr str_detect str_remove_all
 #' @importFrom tibble add_row
-#' @importFrom tidyr replace_na
+#' @importFrom tidyselect starts_with
 #'
 #' @keywords internal
 #'
@@ -149,4 +149,17 @@ update_landuse <- function(swat_inputs, hru_id, nswrm,
   }
 
   return(swat_inputs)
+}
+
+mgt_sch <- schoeps_nswrm$.data$model_setup$modified_inputs$management.sch
+
+op_names <- c('test1', 'test2')
+sch_name <- 'fd_434_drn_1_mgt'
+
+add_dtl_op <- function(mgt_sch, sch_name, op_names) {
+
+  for (op_i in op_names) {
+    library(tidyverse)
+  }
+
 }
