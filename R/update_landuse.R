@@ -175,15 +175,21 @@ add_dtl_op <- function(swat_inputs, sch_name, op_names) {
     str_trim(.)
 
   n_op <- length(op_names)
-  id_row <- which(mgt_sch$name == sch_name)
+  id_row <- which(swat_inputs$management.sch$name == sch_name)
 
   for (op_i in op_names[n_op:1]) {
-    mgt_sch <- add_row(mgt_sch, name = sch_name, op_typ = op_i,
-                       .before = id_row[1])
+    swat_inputs$management.sch <- add_row(swat_inputs$management.sch,
+                                          name = sch_name, op_typ = op_i,
+                                          .before = id_row[1])
   }
 
-  id_row <- which(mgt_sch$name == sch_name)
+  id_row <- which(swat_inputs$management.sch$name == sch_name)
 
-  mgt_sch$numb_ops[id_row] <- length(id_row)
-  mgt_sch$numb_auto[id_row] <- n_op
+  swat_inputs$management.sch$numb_ops[id_row] <- length(id_row)
+  swat_inputs$management.sch$numb_auto[id_row] <- n_op
+
+  swat_inputs$file_updated['management.sch'] <- TRUE
+
+  return(swat_inputs)
+
 }
