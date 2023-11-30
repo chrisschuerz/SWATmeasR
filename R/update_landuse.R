@@ -151,15 +151,39 @@ update_landuse <- function(swat_inputs, hru_id, nswrm,
   return(swat_inputs)
 }
 
-mgt_sch <- schoeps_nswrm$.data$model_setup$modified_inputs$management.sch
 
-op_names <- c('test1', 'test2')
-sch_name <- 'fd_434_drn_1_mgt'
+#' Add a landuse decision table operation to a management schedule
+#'
+#' @param swat_inputs List with SWAT+ input files.
+#' @param sch_name Name of the management schedule to which a decision table
+#'   operation is added.
+#' @param op_names Text string which indicates the names of the decision table
+#'   operations
+#'
+#' @returns The SWAT+ input tables list with the updated management.sch table.
+#'
+#' @importFrom dplyr %>%
+#' @importFrom stringr str_remove_all str_split str_trim
+#' @importFrom tibble add_row
+#'
+#' @keywords internal
+add_dtl_op <- function(swat_inputs, sch_name, op_names) {
+  op_names <- op_names %>%
+    str_remove_all(., 'c\\(|\\)') %>%
+    str_split(., ',') %>%
+    unlist(.) %>%
+    str_trim(.)
 
-add_dtl_op <- function(mgt_sch, sch_name, op_names) {
+  n_op <- length(op_names)
+  id_row <- which(mgt_sch$name == sch_name)
 
-  for (op_i in op_names) {
-    library(tidyverse)
+  for (op_i in op_names[n_op:1]) {
+    mgt_sch <- add_row(mgt_sch, name = sch_name, op_typ = op_i,
+                       .before = id_row[1])
   }
 
+  id_row <- which(mgt_sch$name == sch_name)
+
+  mgt_sch$numb_ops[id_row] <- length(id_row)
+  mgt_sch$numb_auto[id_row] <- n_op
 }
