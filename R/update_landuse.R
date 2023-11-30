@@ -2,52 +2,62 @@
 #'
 #' The land use ('lu-mgt') in hru-data.hru of the land objects defined by the
 #' `hru_id` is overwritten. The new land use label is defined by `nswrm`. For
-#' `nswrm` a new land use is defined in landuse.lum if no land use with this name
-#' already exists in landuse.lum which has the exact same parametrization as
-#' defined with the additional input arguments. If an identical landuse already
-#' exists, this landuse is assigned to the HRUs. If not a new one is added with
-#' the defined parameters (`lum_plnt`, `lum_mgt`, `lum_cn2`, `lum_cpr`, and
-#' `lum_ovn`).
+#' `nswrm` a new land use is defined in landuse.lum if no land use with this
+#' name already exists in landuse.lum which has the exact same parametrization
+#' as defined with the additional input arguments. If an identical landuse
+#' already exists, this landuse is assigned to the HRUs. If not a new one is
+#' added with the defined parameters (`lum_plnt`, `lum_mgt`, `lum_cn2`,
+#' `lum_cpr`, `lum_ovn`, and `lum_tile`).
 #'
 #' @param swat_inputs List with SWAT+ input files.
 #' @param hru_id HRU IDs for which the land use is updated.
-#' @param nswrm NSWRM to be implemented. This will be the new land use label
-#'   in the updated landuse.lum. `nswrm` must be a single character string.
+#' @param nswrm NSWRM to be implemented. This will be the new land use label in
+#'   the updated landuse.lum. `nswrm` must be a single character string.
 #' @param lum_plnt The plant community which is assigned to the land use. A
 #'   single character string must be provided. The passed value must be defined
-#'   in the 'plant.ini' intput file. If (default) `NULL`, then 'lum_plnt' will
-#'   be set 'null' in the landuse.lum.
+#'   in the 'plant.ini' intput file. If `lum_plnt = '::keep::`, then the values
+#'   of 'plnt_com' of each HRU will be preserved.  If `lum_plnt = 'null'` then
+#'   'plnt_com' will be set 'null' in the landuse.lum.
 #' @param lum_mgt The management which is assigned to the land use. A single
 #'   character string must be provided. The passed value must be defined in the
-#'   'management.sch' intput file. If (default) `NULL`, then 'mgt' will be set
-#'   'null' in the landuse.lum.
+#'   'management.sch' intput file. If `lum_mgt = '::keep::`, then the values of
+#'   'mgt' of each HRU will be preserved.  If `lum_mgt = 'null'` then 'mgt' will
+#'   be set 'null' in the landuse.lum.
 #' @param lum_cn2 The cn2 parameter set which is assigned to the land use. A
 #'   single character string must be provided. The passed value must be defined
-#'   in the 'cntabe.lum' intput file. If (default) `NULL`, then 'cn2' will be
-#'   set 'null' in the landuse.lum.
+#'   in the 'cntabe.lum' intput file. If `lum_cn2 = '::keep::`, then the values
+#'   of 'cn2' of each HRU will be preserved.  If `lum_cn2 = 'null'` then 'cn2'
+#'   will be set 'null' in the landuse.lum.
 #' @param lum_cpr The conservation practice which is assigned to the land use. A
 #'   single character string must be provided. The passed value must be defined
-#'   in the 'cons_practice.lum' intput file. If (default) `NULL`, then
-#'   'cons_prac' will be set 'null' in the landuse.lum.
+#'   in the 'cons_practice.lum' intput file. If `lum_cpr = ::keep::`, then the
+#'   values of 'cons_prac' of each HRU will be preserved. If  `lum_cpr = 'null'`
+#'   then 'cons_prac' will be set 'null' in the landuse.lum.
 #' @param lum_ovn The Mannings n parametrization which is assigned to the land
 #'   use. A single character string must be provided. The passed value must be
-#'   defined in the 'ovn_table.lum' intput file. If (default) `NULL`, then
-#'   'ov_mann' will be set 'null' in the landuse.lum.
+#'   defined in the 'ovn_table.lum' intput file. If `lum_ovn = '::keep::`,
+#'   then the values of 'ov_mann' of each HRU will be preserved.  If
+#'   `lum_ovn = 'null'` then 'ov_mann' will be set 'null' in the landuse.lum.
+#' @param lum_tile The tile drainage parametrization which is assigned to the
+#'   land use. A single character string must be provided. The passed value must
+#'   be defined in the 'ovn_table.lum' intput file. If `lum_tile = '::keep::`,
+#'   then the values of 'tile' of each HRU will be preserved.  If
+#'   `lum_tile = null'` then 'tile' will be set 'null' in the landuse.lum.
 #'
 #' @returns The SWAT+ input tables list with the updated landuse.lum and
 #'   hru-data.hru input tables.
 #'
-#' @importFrom dplyr select %>%
-#' @importFrom purrr map map_df map_lgl
+#' @importFrom dplyr bind_rows cur_group_id distinct filter group_by left_join mutate select %>%
+#' @importFrom purrr map map_df map_lgl set_names
 #' @importFrom stringr str_detect str_remove_all
 #' @importFrom tibble add_row
-#' @importFrom tidyr replace_na
+#' @importFrom tidyselect starts_with
 #'
 #' @keywords internal
 #'
 update_landuse <- function(swat_inputs, hru_id, nswrm,
-                           lum_plnt = NULL, lum_mgt = NULL, lum_cn2  = NULL,
-                           lum_cpr  = NULL, lum_ovn = NULL) {
+                           lum_plnt, lum_mgt, lum_cn2,
+                           lum_cpr, lum_ovn, lum_tile) {
   # General data type/structure checks
   stopifnot(is.numeric(hru_id))
   stopifnot(is.character(nswrm))
@@ -62,122 +72,136 @@ update_landuse <- function(swat_inputs, hru_id, nswrm,
   stopifnot(length(lum_cpr) <= 1)
   stopifnot(is.character(lum_ovn) | is.null(lum_ovn))
   stopifnot(length(lum_ovn) <= 1)
+  stopifnot(is.character(lum_tile) | is.null(lum_tile))
+  stopifnot(length(lum_tile) <= 1)
 
-  # Checks for all inputs if they are available in the respective SWAT+ input
-  # files
-  # if (! is.null(lum_plnt)) {
-  #   if (!lum_plnt %in% swat_inputs$plant.ini$pcom_name) {
-  #     stop("The 'lum_plnt' = '", lum_plnt, "' does not exist in 'plant.ini'.\n",
-  #          "Cannot update the land use for '", nswrm, "' in the following HRUs:\n",
-  #          paste(hru_id, collapse = ', '))
-  #   }
-  # } else {
-  #   lum_plnt <- 'null'
-  # }
-  # if (! is.null(lum_mgt)) {
-  #   if (!lum_mgt %in% swat_inputs$management.sch$name) {
-  #     stop("The 'lum_mgt' = '", lum_mgt, "' does not exist in 'management.sch'.\n",
-  #          "Cannot update the land use for '", nswrm, "' in the following HRUs:\n",
-  #          paste(hru_id, collapse = ', '))
-  #   }
-  # } else {
-  #   lum_mgt <- 'null'
-  # }
-  # if (! is.null(lum_cn2)) {
-  #   if (!lum_cn2 %in% swat_inputs$cntabe.lum$name) {
-  #     stop("The 'lum_cn2' = '", lum_cn2, "' does not exist in 'cntable.lum'.\n",
-  #          "Cannot update the land use for '", nswrm, "' in the following HRUs:\n",
-  #          paste(hru_id, collapse = ', '))
-  #   }
-  # } else {
-  #   lum_cn2 <- 'null'
-  # }
-  # if (! is.null(lum_cpr)) {
-  #   if (!lum_cpr %in% swat_inputs$cons_practice.lum$name) {
-  #     stop("The 'lum_cpr' = '", lum_cpr, "' does not exist in 'cons_practice.lum'.\n",
-  #          "Cannot update the land use for '", nswrm, "' in the following HRUs:\n",
-  #          paste(hru_id, collapse = ', '))
-  #   }
-  # } else {
-  #   lum_cpr <- 'null'
-  # }
-  # if (! is.null(lum_ovn)) {
-  #   if (!lum_ovn %in% swat_inputs$ovn_table.lum$name) {
-  #     stop("The 'lum_ovn' = '", lum_ovn, "' does not exist in 'ovn_table.lum'.\n",
-  #          "Cannot update the land use for '", nswrm, "' in the following HRUs:\n",
-  #          paste(hru_id, collapse = ', '))
-  #   }
-  # } else {
-  #   lum_ovn <- 'null'
-  # }
+  hru_lum <- swat_inputs$hru_data.hru %>%
+    filter(., id %in% hru_id) %>%
+    select(id, lu_mgt) %>%
+    set_names(c('id', 'name')) %>%
+    left_join(., swat_inputs$landuse.lum, by = 'name')
 
-  # Get all lum names from landuse.lum
-  lum_names <- swat_inputs$landuse.lum$name
+  if(lum_plnt != '::keep::') {
+    hru_lum$plnt_com <- lum_plnt
+  }
+  if(lum_mgt != '::keep::') {
+    hru_lum$mgt <- lum_mgt
+  }
+  if(lum_cn2 != '::keep::') {
+    hru_lum$cn2 <- lum_cn2
+  }
+  if(lum_cpr != '::keep::') {
+    hru_lum$cons_prac <- lum_cpr
+  }
+  if(lum_ovn != '::keep::') {
+    hru_lum$ov_mann <- lum_ovn
+  }
+  if(lum_tile != '::keep::') {
+    hru_lum$tile <- lum_tile
+  }
+
   # Find all alternative names with for the input argument 'nswrm'
-  lum_alt <- lum_names[str_detect(lum_names,
-                                  paste0(nswrm, '_lum|',
-                                         nswrm, '[:digit:]+', '_lum'))]
+  lum_exist <- filter(swat_inputs$landuse.lum, str_detect(name, nswrm))
 
-  # If nswrm_lum or any of the alternatives are available check if their
-  # parameters match. Otherwise generate a new landuse.lum entry
-  if(length(lum_alt) > 0) {
-    # Get all lines for the lum alternatives from landuse.lum
-    lum_i <- swat_inputs$landuse.lum[swat_inputs$landuse.lum$name %in% lum_alt,]
+  max_nswrm_id <- lum_exist$name %>%
+    str_remove_all(., paste0(nswrm, '|_lum')) %>%
+    as.integer(.) %>%
+    max(0, .)
 
-    # Compare the parameters of the alternatives to the input arguments
-    lum_upd_par   <- c(lum_plnt, lum_mgt, lum_cn2, lum_cpr, lum_ovn)
-    # Check if all are inputs are identical with the parameters in one of
-    # the selected rows from landuse.lum
-    lum_par_ident <- lum_i %>%
-      split(., 1:nrow(.)) %>%
-      map(., ~ select(.x, plnt_com, mgt, cn2, cons_prac, ov_mann)) %>%
-      map(., ~ unlist(.x)) %>%
-      map_lgl(., ~ all(.x == lum_upd_par))
+  hru_lum <- hru_lum %>%
+    group_by(., plnt_com, mgt, cn2, cons_prac, urban, urb_ro, ov_mann, tile, sep, vfs, grww, bmp) %>%
+    mutate(group_id = cur_group_id() + max_nswrm_id) %>%
+    ungroup() %>%
+    mutate(name = paste0(nswrm, group_id, '_lum')) %>%
+    select(-group_id)
 
-    # If non of the landuse.lum lines do have idntical parameters to the input
-    # arguments create a new entry in landuse.lum
-    if (! any(lum_par_ident)) {
-      # Identify maximum ID which was assigned to this nswrm
-      id_max <- lum_alt %>%
-        str_remove_all(., paste0(nswrm, '_lum')) %>%
-        as.numeric(.) %>%
-        c(0,.) %>%
-        max(., na.rm = TRUE)
+  hru_lumgt_upd <- select(hru_lum, id, name)
 
-      # Create new lum label
-      lum_lbl <- paste0(nswrm, id_max+1, '_lum')
+  lum_new <- hru_lum %>%
+    select(., - id) %>%
+    distinct(.)
 
-      # Add entry in landuse lum with the new name and parameters
-      swat_inputs$landuse.lum <- swat_inputs$landuse.lum %>%
-        add_row(., name = lum_lbl,
-                   lum_plnt = lum_plnt,
-                   mgt = lum_mgt,
-                   cn2 = lum_cn2,
-                   cons_prac = lum_cpr,
-                   ov_mann = lum_ovn) %>%
-      map_df(., ~replace_na(.x, 'null'))
-      swat_inputs$file_updated['landuse.lum'] <- TRUE
-    } else {
-      # Use the first identical landuse to assign to the HRUs
-      lum_lbl <- lum_alt[lum_par_ident][1]
-    }
-  } else {
-    lum_lbl <- paste0(nswrm, '_lum')
-    swat_inputs$landuse.lum <- swat_inputs$landuse.lum %>%
-      add_row(., name = lum_lbl,
-              plnt_com = lum_plnt,
-              mgt = lum_mgt,
-              cn2 = lum_cn2,
-              cons_prac = lum_cpr,
-              ov_mann = lum_ovn) %>%
-      map_df(., ~replace_na(.x, 'null'))
+  lum_match <- lum_new %>%
+    left_join(., lum_exist, by = c("cal_group", "plnt_com", "mgt", "cn2",
+                                   "cons_prac", "urban", "urb_ro", "ov_mann",
+                                   "tile", "sep", "vfs", "grww", "bmp"),
+              suffix = c("", ".exist")) %>%
+    select(starts_with('name'))
+
+  lum_new <- lum_new[is.na(lum_match$name.exist),]
+
+  hru_lumgt_upd <- hru_lumgt_upd %>%
+    left_join(., lum_match, by = "name") %>%
+    mutate(lu_mgt_upd = ifelse(!is.na(name.exist), name.exist, name)) %>%
+    select(id, lu_mgt_upd)
+
+  if(nrow(hru_lumgt_upd) > 0) {
+    swat_inputs$hru_data.hru <- swat_inputs$hru_data.hru %>%
+      left_join(., hru_lumgt_upd, by = "id") %>%
+      mutate(lu_mgt = ifelse(!is.na(lu_mgt_upd), lu_mgt_upd, lu_mgt)) %>%
+      select(- lu_mgt_upd)
+    swat_inputs$file_updated['hru_data.hru'] <- TRUE
+  }
+
+  if (nrow(lum_new) > 0) {
+    swat_inputs$landuse.lum <- bind_rows(swat_inputs$landuse.lum, lum_new)
     swat_inputs$file_updated['landuse.lum'] <- TRUE
   }
 
-  # Assign updated land use to the respective HRUs in hru-data.hru
-  swat_inputs$hru_data.hru$lu_mgt[swat_inputs$hru_data.hru$id %in% hru_id] <-
-    lum_lbl
-  swat_inputs$file_updated['hru_data.hru'] <- TRUE
+  return(swat_inputs)
+}
+
+
+#' Add a landuse decision table operation to a management schedule
+#'
+#' @param swat_inputs List with SWAT+ input files.
+#' @param hru_id HRU IDs for which the land use is updated.
+#' @param op_names Text string which indicates the names of the decision table
+#'   operations
+#'
+#' @returns The SWAT+ input tables list with the updated management.sch table.
+#'
+#' @importFrom dplyr %>%
+#' @importFrom stringr str_remove_all str_split str_trim
+#' @importFrom tibble add_row
+#'
+#' @keywords internal
+add_dtl_op <- function(swat_inputs, hru_id, op_names) {
+  op_names <- op_names %>%
+    str_remove_all(., 'c\\(|\\)') %>%
+    str_split(., ',') %>%
+    unlist(.) %>%
+    str_trim(.)
+
+  op_names <- op_names[!op_names %in% c('::keep::', 'null')]
+
+  n_op <- length(op_names)
+
+  for (hru_i in hru_id) {
+    lu_mgt_i <- swat_inputs$hru_data.hru$lu_mgt[swat_inputs$hru_data.hru$id == hru_i]
+    sch_name <- swat_inputs$landuse.lum$mgt[swat_inputs$landuse.lum$name == lu_mgt_i]
+
+    id_row <- which(swat_inputs$management.sch$name == sch_name)
+
+    n_add <- 0
+
+    for (op_i in op_names[n_op:1]) {
+      if (!op_i %in% swat_inputs$management.sch$op_typ[id_row]) {
+        swat_inputs$management.sch <- add_row(swat_inputs$management.sch,
+                                              name = sch_name, op_typ = op_i,
+                                              .before = id_row[1])
+        n_add <- n_add + 1
+      }
+    }
+
+    id_row <- which(swat_inputs$management.sch$name == sch_name)
+
+    swat_inputs$management.sch$numb_ops[id_row] <- length(id_row)
+    swat_inputs$management.sch$numb_auto[id_row] <-
+      max(swat_inputs$management.sch$numb_auto[id_row], na.rm = TRUE) + n_add
+  }
+
+  swat_inputs$file_updated['management.sch'] <- TRUE
 
   return(swat_inputs)
 }

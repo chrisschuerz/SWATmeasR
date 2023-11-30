@@ -55,12 +55,17 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs, overwrite) {
     swat_inputs <- update_landuse(swat_inputs,
                                   hru_id   = hru_id,
                                   nswrm    = def_nswrm$nswrm,
-                                  lum_plnt = def_nswrm$lum_plnt,
-                                  lum_mgt  = def_nswrm$lum_mgt,
-                                  lum_cn2  = def_nswrm$lum_cn2,
-                                  lum_cpr  = def_nswrm$lum_cpr,
-                                  lum_ovn  = def_nswrm$lum_ovn)
-  }
+                                  lum_plnt = def_nswrm$plnt_com,
+                                  lum_mgt  = def_nswrm$mgt,
+                                  lum_cn2  = def_nswrm$cn2,
+                                  lum_cpr  = def_nswrm$cons_prac,
+                                  lum_ovn  = def_nswrm$ov_mann,
+                                  lum_tile = def_nswrm$tile)
+
+    if(!def_nswrm$lum_dtl %in% c('::keep::', 'null')) {
+      swat_inputs <- add_dtl_op(swat_inputs, hru_id, def_nswrm$lum_dtl)
+    }
+    }
   # -------------------------------------------------------------------------
 
   # Replace land objects with pond objects ----------------------------------

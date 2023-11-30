@@ -129,8 +129,8 @@ load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
 #'   change. The lookup table can include the settings for the NSWRM codes
 #'   **buffer**, **edgefilter**, **hedge**, **grassslope**, **grassrchrg**
 #'   , and **afforest**. The `land_use` table must provide the columns
-#'   `type`, `lum_plnt`, `lum_mgt`, `lum_cn2`, `lum_cpr`, and
-#'   `lum_ovn`.
+#'   `type`, `plnt_com`, `mgt`, `cn2`, `cons_prac`, and
+#'   `ov_mann`.
 #' - `'management'`: The management definition is an `*.rds` object which
 #'   must be prepared with the function
 #'   `prepare_management_scenario_inputs()`. The function uses the
@@ -241,71 +241,111 @@ load_nswrm_def <- function(file_path, type, nswrm_defs, swat_inputs, overwrite) 
 #'
 load_luse_def <- function(file_path, swat_inputs) {
   luse_def <- read_csv(file_path, lazy = FALSE,
-                       col_types = cols(.default = 'c'), na = c('', 'NA')) %>%
-    map_df(., ~replace_na(.x, 'null'))
+                       col_types = cols(.default = 'c'), na = c('', 'NA'))
 
-  col_names <-  c('nswrm', 'lum_plnt', 'lum_mgt',
-                  'lum_cn2', 'lum_cpr', 'lum_ovn')
+  col_names <-  c('nswrm', 'plnt_com', 'mgt',
+                  'cn2', 'cons_prac', 'ov_mann')
   col_miss <- ! col_names %in%  names(luse_def)
   if(any(col_miss)) {
     stop("The following columns are missing in the 'land_use' ",
-         "definition table:\n", col_names[col_miss])
+         "definition table:\n", paste(col_names[col_miss], collapse = ', '))
   }
+
+  if (any(is.na(luse_def$nswrm))) {
+    stop("The column 'nswrm' cannot have empty fields.")
+  }
+
+  luse_def <- map_df(luse_def, ~replace_na(.x, '::keep::'))
+
+  # Check optional columns 'tile' and 'lum_dtl'
+
+  if (!'tile' %in% names(luse_def)) {
+    luse_def$tile <- '::keep::'
+  }
+
+  if (!'lum_dtl' %in% names(luse_def)) {
+    luse_def$lum_dtl <- '::keep::'
+  }
+
+  dtl_names <- luse_def$lum_dtl %>%
+    str_remove_all(., 'c\\(|\\)') %>%
+    str_split(., ',') %>%
+    unlist(.) %>%
+    str_trim(.) %>%
+    unique(.)
 
   # Checks for all inputs if they are available in the respective SWAT+ input
   # files
-  lum_plnt_miss <- !luse_def$lum_plnt %in%
-    c(swat_inputs$plant.ini$pcom_name, 'null')
-  lum_mgt_miss  <- !luse_def$lum_mgt %in%
-    c(swat_inputs$management.sch$name, 'null')
-  lum_cn2_miss  <- !luse_def$lum_cn2 %in%
-    c(swat_inputs$cntabe.lum$name, 'null')
-  lum_cpr_miss  <- !luse_def$lum_cpr %in%
-    c(swat_inputs$cons_practice.lum$name, 'null')
-  lum_ovn_miss  <- !luse_def$lum_ovn %in%
-    c(swat_inputs$ovn_table.lum$name, 'null')
+  lum_plnt_miss <- !luse_def$plnt_com %in%
+    c(swat_inputs$plant.ini$pcom_name, 'null', '::keep::')
+  lum_mgt_miss  <- !luse_def$mgt %in%
+    c(swat_inputs$management.sch$name, 'null', '::keep::')
+  lum_cn2_miss  <- !luse_def$cn2 %in%
+    c(swat_inputs$cntabe.lum$name, 'null', '::keep::')
+  lum_cpr_miss  <- !luse_def$cons_prac %in%
+    c(swat_inputs$cons_practice.lum$name, 'null', '::keep::')
+  lum_ovn_miss  <- !luse_def$ov_mann %in%
+    c(swat_inputs$ovn_table.lum$name, 'null', '::keep::')
+  lum_tile_miss  <- !luse_def$tile %in%
+    c(swat_inputs$tiledrain.str$name, 'null', '::keep::')
+  lum_dtl_miss  <- !dtl_names %in%
+    c(swat_inputs$lum.dtl_names, 'null', '::keep::')
 
   if (any(c(lum_plnt_miss, lum_mgt_miss, lum_cn2_miss,
-            lum_cpr_miss, lum_ovn_miss))) {
+            lum_cpr_miss, lum_ovn_miss, lum_tile_miss, lum_dtl_miss))) {
     if(any(lum_plnt_miss)) {
-      plnt_msg <- paste0("'lum_plnt' not defined in 'plant.ini': ",
-                         paste(unique(luse_def$lum_plnt[lum_plnt_miss]),
+      plnt_msg <- paste0("'plnt_com' not defined in 'plant.ini': ",
+                         paste(unique(luse_def$plnt_com[lum_plnt_miss]),
                                collapse = ', '), '\n')
     } else {
       plnt_msg <- ''
     }
     if(any(lum_mgt_miss)) {
-      sch_msg  <- paste0("'lum_mgt'  not defined in 'management.sch': ",
-                         paste(unique(luse_def$lum_mgt[lum_mgt_miss]),
+      sch_msg  <- paste0("'mgt' not defined in 'management.sch': ",
+                         paste(unique(luse_def$mgt[lum_mgt_miss]),
                                collapse = ', '), '\n')
     } else {
       sch_msg  <- ''
     }
     if(any(lum_cn2_miss)) {
-      cn2_msg <- paste0("'lum_cn2' not defined in 'cntabe.lum': ",
-                         paste(unique(luse_def$lum_cn2[lum_cn2_miss]),
+      cn2_msg <- paste0("'cn2' not defined in 'cntabe.lum': ",
+                         paste(unique(luse_def$cn2[lum_cn2_miss]),
                                collapse = ', '), '\n')
     } else {
       cn2_msg <- ''
     }
     if(any(lum_cpr_miss)) {
-      cpr_msg  <- paste0("'lum_cpr' not defined in 'cons_practice.lum': ",
-                         paste(unique(luse_def$lum_cpr[lum_cpr_miss]),
+      cpr_msg  <- paste0("'cons_prac' not defined in 'cons_practice.lum': ",
+                         paste(unique(luse_def$cons_prac[lum_cpr_miss]),
                                collapse = ', '), '\n')
     } else {
       cpr_msg  <- ''
     }
     if(any(lum_ovn_miss)) {
-      ovn_msg  <- paste0("'lum_ovn' not defined in 'ovn_table.lum': ",
-                         paste(unique(luse_def$lum_ovn[lum_ovn_miss]),
+      ovn_msg  <- paste0("'ov_mann' not defined in 'ovn_table.lum': ",
+                         paste(unique(luse_def$ov_mann[lum_ovn_miss]),
                                collapse = ', '), '\n')
     } else {
       ovn_msg  <- ''
     }
+    if(any(lum_tile_miss)) {
+      tile_msg  <- paste0("'tile' not defined in 'tiledrain.str': ",
+                         paste(unique(luse_def$tile[lum_tile_miss]),
+                               collapse = ', '), '\n')
+    } else {
+      tile_msg  <- ''
+    }
+    if(any(lum_dtl_miss)) {
+      dtl_msg  <- paste0("Operation schedules not defined in 'lum.dtl': ",
+                         paste(unique(dtl_names[lum_dtl_miss]),
+                               collapse = ', '), '\n')
+    } else {
+      dtl_msg  <- ''
+    }
 
     stop('The following options are not defined in the respective SWAT+ input ',
          'files: \n\n',
-         plnt_msg, sch_msg, cn2_msg, cpr_msg, ovn_msg,
+         plnt_msg, sch_msg, cn2_msg, cpr_msg, ovn_msg, tile_msg, dtl_msg,
          '\n\nPlease do the following to solve this issue:\n',
          'i)   Add the missing entries in the SWAT+ input files\n',
          "ii)  Reload all SWAT+ input files with ",

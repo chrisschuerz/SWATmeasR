@@ -36,8 +36,8 @@ definitions for all NSWRMs which are represented by a land use
 change. The lookup table can include the settings for the NSWRM codes
 \strong{buffer}, \strong{edgefilter}, \strong{hedge}, \strong{grassslope}, \strong{grassrchrg}
 , and \strong{afforest}. The \code{land_use} table must provide the columns
-\code{type}, \code{lum_plnt}, \code{lum_mgt}, \code{lum_cn2}, \code{lum_cpr}, and
-\code{lum_ovn}.
+\code{type}, \code{plnt_com}, \code{mgt}, \code{cn2}, \code{cons_prac}, and
+\code{ov_mann}.
 \item \code{'management'}: The management definition is an \verb{*.rds} object which
 must be prepared with the function
 \code{prepare_management_scenario_inputs()}. The function uses the
