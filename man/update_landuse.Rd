@@ -8,11 +8,12 @@ update_landuse(
   swat_inputs,
   hru_id,
   nswrm,
-  lum_plnt = NULL,
-  lum_mgt = NULL,
-  lum_cn2 = NULL,
-  lum_cpr = NULL,
-  lum_ovn = NULL
+  lum_plnt,
+  lum_mgt,
+  lum_cn2,
+  lum_cpr,
+  lum_ovn,
+  lum_tile
 )
 }
 \arguments{
@@ -20,33 +21,44 @@ update_landuse(
 
 \item{hru_id}{HRU IDs for which the land use is updated.}
 
-\item{nswrm}{NSWRM to be implemented. This will be the new land use label
-in the updated landuse.lum. \code{nswrm} must be a single character string.}
+\item{nswrm}{NSWRM to be implemented. This will be the new land use label in
+the updated landuse.lum. \code{nswrm} must be a single character string.}
 
 \item{lum_plnt}{The plant community which is assigned to the land use. A
 single character string must be provided. The passed value must be defined
-in the 'plant.ini' intput file. If (default) \code{NULL}, then 'lum_plnt' will
-be set 'null' in the landuse.lum.}
+in the 'plant.ini' intput file. If \verb{lum_plnt = '::keep::}, then the values
+of 'plnt_com' of each HRU will be preserved.  If \code{lum_plnt = 'null'} then
+'plnt_com' will be set 'null' in the landuse.lum.}
 
 \item{lum_mgt}{The management which is assigned to the land use. A single
 character string must be provided. The passed value must be defined in the
-'management.sch' intput file. If (default) \code{NULL}, then 'mgt' will be set
-'null' in the landuse.lum.}
+'management.sch' intput file. If \verb{lum_mgt = '::keep::}, then the values of
+'mgt' of each HRU will be preserved.  If \code{lum_mgt = 'null'} then 'mgt' will
+be set 'null' in the landuse.lum.}
 
 \item{lum_cn2}{The cn2 parameter set which is assigned to the land use. A
 single character string must be provided. The passed value must be defined
-in the 'cntabe.lum' intput file. If (default) \code{NULL}, then 'cn2' will be
-set 'null' in the landuse.lum.}
+in the 'cntabe.lum' intput file. If \verb{lum_cn2 = '::keep::}, then the values
+of 'cn2' of each HRU will be preserved.  If \code{lum_cn2 = 'null'} then 'cn2'
+will be set 'null' in the landuse.lum.}
 
 \item{lum_cpr}{The conservation practice which is assigned to the land use. A
 single character string must be provided. The passed value must be defined
-in the 'cons_practice.lum' intput file. If (default) \code{NULL}, then
-'cons_prac' will be set 'null' in the landuse.lum.}
+in the 'cons_practice.lum' intput file. If \verb{lum_cpr = ::keep::}, then the
+values of 'cons_prac' of each HRU will be preserved. If  \code{lum_cpr = 'null'}
+then 'cons_prac' will be set 'null' in the landuse.lum.}
 
 \item{lum_ovn}{The Mannings n parametrization which is assigned to the land
 use. A single character string must be provided. The passed value must be
-defined in the 'ovn_table.lum' intput file. If (default) \code{NULL}, then
-'ov_mann' will be set 'null' in the landuse.lum.}
+defined in the 'ovn_table.lum' intput file. If \verb{lum_ovn = '::keep::},
+then the values of 'ov_mann' of each HRU will be preserved.  If
+\code{lum_ovn = 'null'} then 'ov_mann' will be set 'null' in the landuse.lum.}
+
+\item{lum_tile}{The tile drainage parametrization which is assigned to the
+land use. A single character string must be provided. The passed value must
+be defined in the 'ovn_table.lum' intput file. If \verb{lum_tile = '::keep::},
+then the values of 'tile' of each HRU will be preserved.  If
+\verb{lum_tile = null'} then 'tile' will be set 'null' in the landuse.lum.}
 }
 \value{
 The SWAT+ input tables list with the updated landuse.lum and
@@ -55,11 +67,11 @@ hru-data.hru input tables.
 \description{
 The land use ('lu-mgt') in hru-data.hru of the land objects defined by the
 \code{hru_id} is overwritten. The new land use label is defined by \code{nswrm}. For
-\code{nswrm} a new land use is defined in landuse.lum if no land use with this name
-already exists in landuse.lum which has the exact same parametrization as
-defined with the additional input arguments. If an identical landuse already
-exists, this landuse is assigned to the HRUs. If not a new one is added with
-the defined parameters (\code{lum_plnt}, \code{lum_mgt}, \code{lum_cn2}, \code{lum_cpr}, and
-\code{lum_ovn}).
+\code{nswrm} a new land use is defined in landuse.lum if no land use with this
+name already exists in landuse.lum which has the exact same parametrization
+as defined with the additional input arguments. If an identical landuse
+already exists, this landuse is assigned to the HRUs. If not a new one is
+added with the defined parameters (\code{lum_plnt}, \code{lum_mgt}, \code{lum_cn2},
+\code{lum_cpr}, \code{lum_ovn}, and \code{lum_tile}).
 }
 \keyword{internal}
