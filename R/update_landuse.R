@@ -155,8 +155,7 @@ update_landuse <- function(swat_inputs, hru_id, nswrm,
 #' Add a landuse decision table operation to a management schedule
 #'
 #' @param swat_inputs List with SWAT+ input files.
-#' @param sch_name Name of the management schedule to which a decision table
-#'   operation is added.
+#' @param hru_id HRU IDs for which the land use is updated.
 #' @param op_names Text string which indicates the names of the decision table
 #'   operations
 #'
@@ -167,7 +166,7 @@ update_landuse <- function(swat_inputs, hru_id, nswrm,
 #' @importFrom tibble add_row
 #'
 #' @keywords internal
-add_dtl_op <- function(swat_inputs, sch_name, op_names) {
+add_dtl_op <- function(swat_inputs, hru_id, op_names) {
   op_names <- op_names %>%
     str_remove_all(., 'c\\(|\\)') %>%
     str_split(., ',') %>%
@@ -175,21 +174,32 @@ add_dtl_op <- function(swat_inputs, sch_name, op_names) {
     str_trim(.)
 
   n_op <- length(op_names)
-  id_row <- which(swat_inputs$management.sch$name == sch_name)
 
-  for (op_i in op_names[n_op:1]) {
-    swat_inputs$management.sch <- add_row(swat_inputs$management.sch,
-                                          name = sch_name, op_typ = op_i,
-                                          .before = id_row[1])
+  for (hru_i in hru_id) {
+    lu_mgt_i <- swat_inputs$hru_data.hru$lu_mgt[swat_inputs$hru_data.hru$id == hru_i]
+    sch_name <- swat_inputs$landuse.lum$mgt[swat_inputs$landuse.lum$name == lu_mgt_i]
+
+    id_row <- which(swat_inputs$management.sch$name == sch_name)
+
+    n_add <- 0
+
+    for (op_i in op_names[n_op:1]) {
+      if (!op_i %in% swat_inputs$management.sch$op_typ[id_row]) {
+        swat_inputs$management.sch <- add_row(swat_inputs$management.sch,
+                                              name = sch_name, op_typ = op_i,
+                                              .before = id_row[1])
+        n_add <- n_add + 1
+      }
+    }
+
+    id_row <- which(swat_inputs$management.sch$name == sch_name)
+
+    swat_inputs$management.sch$numb_ops[id_row] <- length(id_row)
+    swat_inputs$management.sch$numb_auto[id_row] <-
+      max(swat_inputs$management.sch$numb_auto[id_row], na.rm = TRUE) + n_add
   }
-
-  id_row <- which(swat_inputs$management.sch$name == sch_name)
-
-  swat_inputs$management.sch$numb_ops[id_row] <- length(id_row)
-  swat_inputs$management.sch$numb_auto[id_row] <- n_op
 
   swat_inputs$file_updated['management.sch'] <- TRUE
 
   return(swat_inputs)
-
 }
