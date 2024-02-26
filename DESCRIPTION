@@ -1,6 +1,6 @@
 Package: SWATmeasR
 Title: Implementation of NSWRMs in SWATbuildR model setups
-Version: 0.4.0.9000
+Version: 0.4.0.9001
 Authors@R: 
     person("Christoph", "Schürz", , "christoph.schuerz@ufz.de", 
            role = c("aut", "cre"), 

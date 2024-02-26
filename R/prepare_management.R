@@ -100,7 +100,8 @@ prepare_management_scenario_inputs <- function(project_path, status_quo,
 
     write_farmr_ops(farm_scen[[scen_i]],
     start_year = start_year,
-    end_year = end_year)
+    end_year = end_year,
+    project_type = )
 
     update_landuse_labels(project_path)
 
@@ -474,8 +475,8 @@ read_farmr <- function(file) {
 #'
 #' @keywords internal
 #'
-write_farmr_ops <- function(farmr_project, start_year, end_year, project_type) {
-  if (is.null(project_type)) {
+write_farmr_ops <- function(farmr_project, start_year, end_year) {
+  if (is.null(farmr_project$.data$meta$project_type)) {
     SWATfarmR:::write_operation(path = farmr_project$.data$meta$project_path,
                                 proj_name = farmr_project$.data$meta$project_name,
                                 mgt = farmr_project$.data$management$schedule,
