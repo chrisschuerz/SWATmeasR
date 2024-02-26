@@ -281,34 +281,44 @@ read_tbl_n <- function(file_path, col_names = NULL, n_skip = 1,
 #' @keywords internal
 #'
 read_con_file <- function(file_path) {
-  con_mtx <- fread(file_path, skip = 2, sep = NULL, sep2 = NULL, header = F) %>%
-    unlist(.) %>%
-    unname(.) %>%
-    str_trim(.) %>%
-    str_split(., '[:space:]+', simplify = T)
-
   obj_names <- c("id", "name", "gis_id", "area", "lat", "lon", "elev",
                  "obj_id", "wst", "cst", "ovfl", "rule", "out_tot")
   con_names <- c("obj_typ", "obj_id", "hyd_typ", "frac")
-  n_con <- (dim(con_mtx)[2]-length(obj_names)) / length(con_names)
-  if(n_con > 0) {
-    rep_ids <- 1:n_con
+
+  if(file.exists(file_path)) {
+    con_mtx <- fread(file_path, skip = 2, sep = NULL, sep2 = NULL, header = F) %>%
+      unlist(.) %>%
+      unname(.) %>%
+      str_trim(.) %>%
+      str_split(., '[:space:]+', simplify = T)
+
+    n_con <- (dim(con_mtx)[2]-length(obj_names)) / length(con_names)
+    if(n_con > 0) {
+      rep_ids <- 1:n_con
+    } else {
+      rep_ids <- NULL
+    }
+
+    con_names <- paste(rep(con_names, n_con),
+                       rep(rep_ids, each = length(con_names)),
+                       sep = '_')
+
+    con_tbl <- as_tibble(con_mtx, validate = NULL, .name_repair = 'minimal') %>%
+      set_names(c(obj_names, con_names))
+
+    id_int <- c(1,3,8,13, 15 + (rep_ids - 1)*4)
+    con_tbl[ , id_int] <- map_df(con_tbl[ , id_int], as.integer)
+
+    id_dbl <- c(4:7, 17 + (rep_ids - 1)*4)
+    con_tbl[ , id_dbl] <- map_df(con_tbl[ , id_dbl], as.numeric)
   } else {
-    rep_ids <- NULL
+    con_tbl <- tibble(!!!rep(NA, length(obj_names)),
+                      .rows = 0, .name_repair = ~ obj_names)
+
+    col_types <- unlist(strsplit('iciddddiciiii', '')) %>%
+      recode(., c = 'character', d = 'numeric', i = 'integer')
+    tbl <- map2_df(tbl, col_types, ~ as(.x, .y))
   }
-
-  con_names <- paste(rep(con_names, n_con),
-                     rep(rep_ids, each = length(con_names)),
-                     sep = '_')
-
-  con_tbl <- as_tibble(con_mtx, validate = NULL, .name_repair = 'minimal') %>%
-    set_names(c(obj_names, con_names))
-
-  id_int <- c(1,3,8,13, 15 + (rep_ids - 1)*4)
-  con_tbl[ , id_int] <- map_df(con_tbl[ , id_int], as.integer)
-
-  id_dbl <- c(4:7, 17 + (rep_ids - 1)*4)
-  con_tbl[ , id_dbl] <- map_df(con_tbl[ , id_dbl], as.numeric)
 
   return(con_tbl)
 }
