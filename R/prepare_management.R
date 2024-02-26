@@ -439,20 +439,25 @@ read_farmr <- function(file) {
   farmr_obj$.data$meta$project_path <- project_path
   farmr_obj$.data$meta$project_name <- project_name
 
-  mgts_path <- paste0(project_path, '/', project_name, '.mgts')
-  if(file.exists(mgts_path)) {
-    mgt_db <- dbConnect(SQLite(), mgts_path)
-    mgt_tbls <- dbListTables(mgt_db)
-    farmr_obj$.data$scheduled_operations$scheduled_years <-
-      dbReadTable(mgt_db, 'scheduled_years') %>%
-      tibble(.)
-    if('skipped_operations' %in% mgt_tbls) {
-      farmr_obj$.data$scheduled_operations$skipped_operations <-
-        dbReadTable(mgt_db, 'skipped_operations') %>%
-        tibble(.) %>%
-        mutate(date_prev_op = ymd(19700101) + date_prev_op)
+  project_type <- farmr_obj$.data$meta$project_type
+  project_type <- ifelse(is.null(project_type), 'database', 'environment')
+
+  if (project_type == 'database') {
+    mgts_path <- paste0(project_path, '/', project_name, '.mgts')
+    if(file.exists(mgts_path)) {
+      mgt_db <- dbConnect(SQLite(), mgts_path)
+      mgt_tbls <- dbListTables(mgt_db)
+      farmr_obj$.data$scheduled_operations$scheduled_years <-
+        dbReadTable(mgt_db, 'scheduled_years') %>%
+        tibble(.)
+      if('skipped_operations' %in% mgt_tbls) {
+        farmr_obj$.data$scheduled_operations$skipped_operations <-
+          dbReadTable(mgt_db, 'skipped_operations') %>%
+          tibble(.) %>%
+          mutate(date_prev_op = ymd(19700101) + date_prev_op)
+      }
+      dbDisconnect(mgt_db)
     }
-    dbDisconnect(mgt_db)
   }
 
   return(farmr_obj)
@@ -469,16 +474,22 @@ read_farmr <- function(file) {
 #'
 #' @keywords internal
 #'
-write_farmr_ops <- function(farmr_project, start_year, end_year) {
-  SWATfarmR:::write_operation(path = farmr_project$.data$meta$project_path,
-                              proj_name = farmr_project$.data$meta$project_name,
-                              mgt = farmr_project$.data$management$schedule,
-                              mgt_raw = farmr_project$.data$meta$mgt_raw,
-                              assigned_hrus = farmr_project$.data$scheduled_operations$assigned_hrus,
-                              start_year = start_year,
-                              end_year = end_year,
-                              year_range = farmr_project$.data$scheduled_operations$scheduled_years,
-                              version = farmr_project$.data$meta$swat_version)
+write_farmr_ops <- function(farmr_project, start_year, end_year, project_type) {
+  if (is.null(project_type)) {
+    SWATfarmR:::write_operation(path = farmr_project$.data$meta$project_path,
+                                proj_name = farmr_project$.data$meta$project_name,
+                                mgt = farmr_project$.data$management$schedule,
+                                mgt_raw = farmr_project$.data$meta$mgt_raw,
+                                assigned_hrus = farmr_project$.data$scheduled_operations$assigned_hrus,
+                                start_year = start_year,
+                                end_year = end_year,
+                                year_range = farmr_project$.data$scheduled_operations$scheduled_years,
+                                version = farmr_project$.data$meta$swat_version)
+  } else {
+    SWATfarmR:::write_operation(data = farmr_project$.data,
+                                start_year = start_year,
+                                end_year = end_year)
+  }
 }
 
 
