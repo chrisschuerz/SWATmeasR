@@ -327,7 +327,7 @@ update_res_con_pond <- function(res_con, rtu_con, hru_id, to_cha_id, res_id) {
 #' @keywords internal
 #'
 update_res_res_pond <- function(res_res, res_res_pnd, hru_id) {
-  res_add <- tibble(id = max(res_res$id) + 1,
+  res_add <- tibble(id = max(res_res$id, 0) + 1,
                     name = paste0('pnd', hru_id),
                     init = 'initres1',
                     hyd  = name) %>%

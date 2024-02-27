@@ -303,21 +303,26 @@ read_con_file <- function(file_path) {
                        rep(rep_ids, each = length(con_names)),
                        sep = '_')
 
-    con_tbl <- as_tibble(con_mtx, validate = NULL, .name_repair = 'minimal') %>%
-      set_names(c(obj_names, con_names))
+    col_types <- unlist(strsplit(c('iciddddiciiii', rep('cicd', n_con)), '')) %>%
+      recode(., c = 'character', d = 'numeric', i = 'integer')
 
-    id_int <- c(1,3,8,13, 15 + (rep_ids - 1)*4)
-    con_tbl[ , id_int] <- map_df(con_tbl[ , id_int], as.integer)
+    con_tbl <- as_tibble(con_mtx, validate = NULL,
+                         .name_repair = ~ c(obj_names, con_names)) %>%
+      map2_df(., col_types, ~ as(.x, .y))
 
-    id_dbl <- c(4:7, 17 + (rep_ids - 1)*4)
-    con_tbl[ , id_dbl] <- map_df(con_tbl[ , id_dbl], as.numeric)
+    # id_int <- c(1,3,8,13, 15 + (rep_ids - 1)*4)
+    # con_tbl[ , id_int] <- map_df(con_tbl[ , id_int], as.integer)
+    #
+    # id_dbl <- c(4:7, 17 + (rep_ids - 1)*4)
+    # con_tbl[ , id_dbl] <- map_df(con_tbl[ , id_dbl], as.numeric)
   } else {
     con_tbl <- tibble(!!!rep(NA, length(obj_names)),
                       .rows = 0, .name_repair = ~ obj_names)
 
     col_types <- unlist(strsplit('iciddddiciiii', '')) %>%
       recode(., c = 'character', d = 'numeric', i = 'integer')
-    tbl <- map2_df(tbl, col_types, ~ as(.x, .y))
+
+    con_tbl <- map2_df(con_tbl, col_types, ~ as(.x, .y))
   }
 
   return(con_tbl)
