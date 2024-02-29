@@ -476,19 +476,19 @@ read_farmr <- function(file) {
 #'
 write_farmr_ops <- function(farmr_project, start_year, end_year) {
   if (is.null(farmr_project$.data$meta$project_type)) {
-    SWATfarmR:::write_operation(path = farmr_project$.data$meta$project_path,
-                                proj_name = farmr_project$.data$meta$project_name,
-                                mgt = farmr_project$.data$management$schedule,
-                                mgt_raw = farmr_project$.data$meta$mgt_raw,
-                                assigned_hrus = farmr_project$.data$scheduled_operations$assigned_hrus,
-                                start_year = start_year,
-                                end_year = end_year,
-                                year_range = farmr_project$.data$scheduled_operations$scheduled_years,
-                                version = farmr_project$.data$meta$swat_version)
+    farmr_project$write_operation(path = farmr_project$.data$meta$project_path,
+                                  proj_name = farmr_project$.data$meta$project_name,
+                                  mgt = farmr_project$.data$management$schedule,
+                                  mgt_raw = farmr_project$.data$meta$mgt_raw,
+                                  assigned_hrus = farmr_project$.data$scheduled_operations$assigned_hrus,
+                                  start_year = start_year,
+                                  end_year = end_year,
+                                  year_range = farmr_project$.data$scheduled_operations$scheduled_years,
+                                  version = farmr_project$.data$meta$swat_version)
   } else {
-    SWATfarmR:::write_operation(data = farmr_project$.data,
-                                start_year = start_year,
-                                end_year = end_year)
+    farmr_project$write_operation(data = farmr_project$.data,
+                                  start_year = start_year,
+                                  end_year = end_year)
   }
 }
 
