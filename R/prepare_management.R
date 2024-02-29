@@ -476,19 +476,121 @@ read_farmr <- function(file) {
 #'
 write_farmr_ops <- function(farmr_project, start_year, end_year) {
   if (is.null(farmr_project$.data$meta$project_type)) {
-    farmr_project$write_operation(path = farmr_project$.data$meta$project_path,
-                                  proj_name = farmr_project$.data$meta$project_name,
-                                  mgt = farmr_project$.data$management$schedule,
-                                  mgt_raw = farmr_project$.data$meta$mgt_raw,
-                                  assigned_hrus = farmr_project$.data$scheduled_operations$assigned_hrus,
-                                  start_year = start_year,
-                                  end_year = end_year,
-                                  year_range = farmr_project$.data$scheduled_operations$scheduled_years,
-                                  version = farmr_project$.data$meta$swat_version)
+    write_operation_v3(path = farmr_project$.data$meta$project_path,
+                       proj_name = farmr_project$.data$meta$project_name,
+                       mgt = farmr_project$.data$management$schedule,
+                       mgt_raw = farmr_project$.data$meta$mgt_raw,
+                       assigned_hrus = farmr_project$.data$scheduled_operations$assigned_hrus,
+                       start_year = start_year,
+                       end_year = end_year,
+                       year_range = farmr_project$.data$scheduled_operations$scheduled_years,
+                       version = farmr_project$.data$meta$swat_version)
   } else {
-    farmr_project$write_operation(data = farmr_project$.data,
-                                  start_year = start_year,
-                                  end_year = end_year)
+    write_operation_v4(data = farmr_project$.data,
+                       start_year = start_year,
+                       end_year = end_year)
+  }
+}
+
+#' Write the mgt schedules into the respective files in the TxtInOut folder
+#'
+#' @param path Path to the TxtInOut folder
+#' @param mgt_raw List of original files that are relevant for the mgt scheduling.
+#' @param schedule List of tibbles with the scheduled operations.
+#' @param assigned_hrus Tibble that links the mgt schedules to the HRUs
+#' @param start_year Numeric. Defines the start year for which to write operations.
+#' @param end_year Numeric. Defines the last year for which to write operations.
+#' @param year_range numeric vector with start and end year of the scheduled operations.
+#' @param version String that indicates the SWAT version.
+#'
+#'
+#' @keywords internal
+#'
+write_operation_v3 <- function(path, proj_name, mgt, mgt_raw, assigned_hrus,
+                               start_year, end_year, year_range, version) {
+
+  if(is.null(start_year)) {
+    start_year <- year_range[1]
+  }
+  if(is.null(end_year)) {
+    end_year <- year_range[2]
+  }
+  if(start_year > end_year) {
+    stop("'end_year' must be greater than 'start_year'!")
+  }
+  if(start_year < year_range[1] | end_year > year_range[2]) {
+    stop("'start_year' and 'end_year' must be in a range between ",
+         year_range[1], " and ", year_range[2], "!")
+  }
+
+  unnassigned_hrus <- filter(assigned_hrus, lu_mgt %in% mgt$land_use, is.na(schedule))
+
+  if(nrow(unnassigned_hrus) > 0) {
+    stop('Scheduling of operations incomplete! \n',
+         "  Run .$schedule_operations(), with replace = 'missing' to schedule all missing operations.")
+  }
+
+  cat("Writing management files:\n")
+  if (version == 'plus') {
+    SWATfarmR:::write_op_plus(path, proj_name, mgt_raw, assigned_hrus, start_year, end_year)
+  } else {
+    SWATfarmR:::write_op_2012(path, proj_name, mgt_raw, assigned_hrus, start_year, end_year)
+  }
+}
+
+#' Write the mgt schedules into the respective files in the TxtInOut folder
+#'
+#' @param data List with all data stored in the farmR object.
+#' @param start_year Numeric. Defines the start year for which to write operations.
+#' @param end_year Numeric. Defines the last year for which to write operations.
+#'
+#' @keywords internal
+#'
+write_operation_v4 <- function(data, start_year, end_year) {
+
+  path  <- data$meta$project_path
+  proj_name <- data$meta$project_name
+  proj_type <- data$meta$project_type
+  mgt <- data$management$schedule
+  mgt_raw <- data$meta$mgt_raw
+  assigned_hrus <- data$scheduled_operations$assigned_hrus
+  year_range <- data$scheduled_operations$scheduled_years
+  version <- data$meta$swat_version
+
+  if (proj_type == 'environment') {
+    schedules <- data$scheduled_operations$schedules
+  } else {
+    schedules <- NULL
+  }
+
+  if(is.null(start_year)) {
+    start_year <- year_range[1]
+  }
+  if(is.null(end_year)) {
+    end_year <- year_range[2]
+  }
+  if(start_year > end_year) {
+    stop("'end_year' must be greater than 'start_year'!")
+  }
+  if(start_year < year_range[1] | end_year > year_range[2]) {
+    stop("'start_year' and 'end_year' must be in a range between ",
+         year_range[1], " and ", year_range[2], "!")
+  }
+
+  unnassigned_hrus <- filter(assigned_hrus, lu_mgt %in% mgt$land_use, is.na(schedule))
+
+  if(nrow(unnassigned_hrus) > 0) {
+    stop('Scheduling of operations incomplete! \n',
+         "  Run .$schedule_operations(), with replace = 'missing' to schedule all missing operations.")
+  }
+
+  cat("Writing management files:\n")
+  if (version == 'plus') {
+    SWATfarmR:::write_op_plus(path, proj_name, mgt_raw, assigned_hrus, schedules,
+                  start_year, end_year)
+  } else {
+    SWATfarmR:::write_op_2012(path, proj_name, mgt_raw, assigned_hrus, schedules,
+                  start_year, end_year)
   }
 }
 
