@@ -626,10 +626,10 @@ write_op_plus <- function(path, proj_name, mgt_raw, assigned_hrus, schedules,
   plant_ini <- prepare_ini(mgt_raw, schedules, start_year, end_year)
 
   cat("  - Writing files \n")
-  write_lines(hru_data, path%//%'hru-data.hru')
-  write_lines(landuse_lum, path%//%'landuse.lum')
-  write_lines(mgt_sch, path%//%'management.sch')
-  write_lines(plant_ini, path%//%'plant.ini')
+  write_lines(hru_data,    paste0(path, '/hru-data.hru'))
+  write_lines(landuse_lum, paste0(path, '/landuse.lum'))
+  write_lines(mgt_sch,     paste0(path, '/management.sch'))
+  write_lines(plant_ini,   paste0(path, '/plant.ini'))
 
   cat("  - Updating 'time.sim'\n")
   time_sim <- mgt_raw$time_sim
@@ -638,7 +638,7 @@ write_op_plus <- function(path, proj_name, mgt_raw, assigned_hrus, schedules,
                           c('%9s','%10s', '%9s',  '%9s',  '%9s'),
                           ~ sprintf(.y, .x)) %>%
     paste(., collapse = ' ')
-  write_lines(time_sim, path%//%'time.sim')
+  write_lines(time_sim, paste0(path, '/time.sim'))
 
   cat("  - Updating 'file.cio'\n")
   file_cio <- mgt_raw$file_cio
@@ -649,7 +649,7 @@ write_op_plus <- function(path, proj_name, mgt_raw, assigned_hrus, schedules,
   lum_line[3] <- 'management.sch'
   file_cio[21] <- paste(sprintf(rep('%-17s', length(lum_line)), lum_line),
                         collapse = ' ')
-  write_lines(file_cio, path%//%'file.cio')
+  write_lines(file_cio, paste0(path, '/file.cio'))
 
   interval(t0,now()) %>%
     round(.) %>%
