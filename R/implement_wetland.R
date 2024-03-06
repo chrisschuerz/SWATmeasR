@@ -176,7 +176,7 @@ is_hru_drained <- function(swat_inputs, hru_id) {
 #' @keywords internal
 #'
 update_wet_wet <- function(wet_wet, wet_wet_i, hru_id_chr) {
-  wet_add <- tibble(id = max(wet_wet$id) + 1,
+  wet_add <- tibble(id = max(wet_wet$id, 0) + 1,
                     name = paste0('wet', hru_id_chr),
                     init = 'initwet1',
                     hyd = paste0('hydwet', hru_id_chr)) %>%
