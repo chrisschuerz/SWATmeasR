@@ -196,7 +196,7 @@ add_dtl_op <- function(swat_inputs, hru_id, op_names) {
 
     id_row <- which(swat_inputs$management.sch$name == sch_name)
 
-    # swat_inputs$management.sch$numb_ops[id_row] <- length(id_row)
+    swat_inputs$management.sch$numb_ops[id_row] <- length(id_row) - n_add
     swat_inputs$management.sch$numb_auto[id_row] <-
       max(swat_inputs$management.sch$numb_auto[id_row], na.rm = TRUE) + n_add
   }
