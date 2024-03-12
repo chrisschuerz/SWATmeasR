@@ -71,6 +71,7 @@ implement_wetlands <- function(swat_inputs, hru_id, to_cha_id, from_cha_id,
 
       wet_wet_i <- wet_wet_sel[i, ]
       hyd_wet_i <- hyd_wet_sel[i, ]
+      lu_mgt_i <- lu_mgt_sel[i]
 
       # Update the wetland.wet input file by adding the new wetland for hru_i
       swat_inputs$wetland.wet   <- update_wet_wet(swat_inputs$wetland.wet,
@@ -86,7 +87,7 @@ implement_wetlands <- function(swat_inputs, hru_id, to_cha_id, from_cha_id,
       # Copy and rename the landuse.lum definition of hru_i and remove any tile.
       swat_inputs$landuse.lum   <- update_lum_wetl(swat_inputs$landuse.lum,
                                                    swat_inputs$hru_data.hru,
-                                                   lu_mgt_sel,
+                                                   lu_mgt_i,
                                                    hru_i,
                                                    hru_id_chr)
       # Update hru-data.hru by adding the surface storage and updating lu_mgt.
@@ -95,14 +96,14 @@ implement_wetlands <- function(swat_inputs, hru_id, to_cha_id, from_cha_id,
                                                        lum_name_i,
                                                        hru_i,
                                                        hru_i_chr)
-    if(!is.na(to_cha_id) | has_drn) {
+    if(!is.na(to_cha_i) | has_drn) {
       swat_inputs$file_updated['rout_unit.con'] <- TRUE
       swat_inputs$rout_unit.con <- update_rtu_con_wetl(swat_inputs$rout_unit.con,
                                                        to_cha_i,
                                                        has_drn,
                                                        hru_i)
     }
-    if(!is.na(from_cha_id)) {
+    if(!all(is.na(from_cha_i))) {
       swat_inputs$file_updated['chandeg.con'] <- TRUE
       swat_inputs$chandeg.con <- update_cha_con_wetl(swat_inputs$chandeg.con,
                                                      from_cha_i,
