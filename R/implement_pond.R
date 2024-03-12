@@ -223,14 +223,29 @@ update_rtu_con_pond <- function(rtu_con, rtu_con_chg, hru_id, res_id) {
       rtu_con[rtu_con$id == chg_i$id[i],
               paste0('obj_id_', chg_i$con_id[i])] <- res_id
     }
-
-    # Set all fractions for connections from the replaced object to 0
-    rtu_con[rtu_con$id == hru_id,
-            paste0('frac_', 1:((ncol(rtu_con)-13)/4))] <- 0
-
-    #Set area of replaced object to minimum value
-    rtu_con[rtu_con$id == hru_id, ]$area <- 0.00001
   }
+
+  # Set the number of connections for the replaced object to 0
+  rtu_con[rtu_con$id == hru_id, ]$out_tot <- 0
+
+  # Set all object types for connections from the replaced object to an empty string
+  rtu_con[rtu_con$id == hru_id,
+          paste0('obj_typ_', 1:((ncol(rtu_con)-13)/4))] <- ''
+
+  # Set all object ids for connections from the replaced object to NA
+  rtu_con[rtu_con$id == hru_id,
+          paste0('obj_id_', 1:((ncol(rtu_con)-13)/4))] <- NA_integer_
+
+  # Set all hydrology types for connections from the replaced object to an empty string
+  rtu_con[rtu_con$id == hru_id,
+          paste0('hyd_typ_', 1:((ncol(rtu_con)-13)/4))] <- ''
+
+  # Set all fractions for connections from the replaced object to NA
+  rtu_con[rtu_con$id == hru_id,
+          paste0('frac_', 1:((ncol(rtu_con)-13)/4))] <- NA
+
+  #Set area of replaced object to minimum value
+  rtu_con[rtu_con$id == hru_id, ]$area <- 0.00001
 
   return(rtu_con)
 }
