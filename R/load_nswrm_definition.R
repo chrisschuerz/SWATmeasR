@@ -94,8 +94,11 @@ load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
          paste(nswrm_loc$id[id_no_obj], collapse = ', '))
   }
 
-  hru_pond_ids <- unique(unlist(nswrm_loc$obj_id[nswrm_loc$type == 'pond']))
-  hru_pond_def_miss <- ! hru_pond_ids %in% nswrm_defs$pond$hru_id
+  # Updated approach to compare list ids in pond definition and
+  # location definition.
+  hru_pond_ids <- nswrm_loc$obj_id[nswrm_loc$type == 'pond']
+  hru_pond_def_miss <- !map_lgl(nswrm_defs$pond$hru_id,
+                                ~ match_pond_hru_ids(hru_pond_ids, .x))
 
   if(any(hru_pond_def_miss)) {
     stop("Pond locations ('obj_id's) were defined ",
@@ -755,4 +758,8 @@ check_settings_column <- function(tbl, col_name, val_class, measr_type) {
   }
 
   return(tbl)
+}
+
+match_pond_hru_ids <- function(hru_ids_pond, hru_ids_loc_i) {
+  any(map_lgl(hru_ids_pond, ~all(.x %in% hru_ids_loc_i)))
 }
