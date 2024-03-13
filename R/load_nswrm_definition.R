@@ -473,7 +473,7 @@ load_water_def <- function(file_path, swat_inputs, type) {
                        na = c('', 'NA'))
 
   # Initialization and checks of input table columns
-  def_tbl <- check_settings_column(def_tbl, 'hru_id', 'integer', 'all')
+  def_tbl <- check_settings_column(def_tbl, 'hru_id', 'integer', type)
   if (type == 'wetland') {
     def_tbl <- check_settings_column(def_tbl, 'lu_mgt', 'character', 'all')
   }
@@ -503,7 +503,7 @@ load_water_def <- function(file_path, swat_inputs, type) {
                     all_of(hyd_par_names), rel, sed, nut)
 
   hru_id_na <- is.na(def_tbl$hru_id)
-  is_no_hru_id    <- ! def_tbl$hru_id %in% swat_inputs$hru_data.hru$id
+  is_no_hru_id    <- map_lgl(def_tbl$hru_id, ~ any(!.x  %in% swat_inputs$hru_data.hru$id))
   if(type == 'pond') {
     is_no_lu_mgt <- FALSE
     cha_id_na <- is.na(def_tbl$cha_to_id)
@@ -619,9 +619,16 @@ load_water_def <- function(file_path, swat_inputs, type) {
 
   # Initialize pond and wetland parameters and pointers
   if (type == 'pond') {
-    def_tbl <- def_tbl %>%
+    pond_area <- def_tbl %>%
+      select(hru_id) %>%
+      mutate(id = 1:nrow(.)) %>%
+      unnest(., cols = c(hru_id)) %>%
       left_join(., hru_area, by = c('hru_id' = 'id')) %>%
-      mutate(area_ps = area,
+      group_by(id) %>%
+      summarise(., area = sum(area))
+
+    def_tbl <- def_tbl %>%
+      mutate(area_ps = pond_area$area,
              vol_ps  = ifelse(is.na(vol_ps), 10*area_ps, vol_ps),
              area_es = ifelse(is.na(area_es), 1.15*area_ps, area_es),
              vol_es  = ifelse(is.na(vol_es), 10*area_es, vol_es),
@@ -632,9 +639,7 @@ load_water_def <- function(file_path, swat_inputs, type) {
              rel     = ifelse(is.na(rel), rel_dflt, rel),
              sed     = ifelse(is.na(sed), sed_dflt, sed),
              nut     = ifelse(is.na(nut), nut_dflt, nut)
-
-             ) %>%
-      select(- area)
+             )
   } else if (type == 'wetland') {
     def_tbl <- def_tbl %>%
       mutate(hru_ps      = ifelse(is.na(hru_ps),  0.1, hru_ps),
@@ -741,7 +746,11 @@ check_settings_column <- function(tbl, col_name, val_class, measr_type) {
     stop(paste0("'", col_name,"' must be defined for all ponds."))
   } else if (!col_name %in% names(tbl) | all(is.na(tbl[[col_name]]))) {
     tbl[[col_name]] <- as(NA, val_class)
-  } else {
+  } else if (measr_type == 'pond') {
+    tbl[[col_name]] <- map(tbl[[col_name]],
+                               ~ eval(parse(text = paste0('c(', .x, ')')))) %>%
+      map(., ~as.integer(.x))
+  } else if(measr_type == 'wetland') {
     tbl[[col_name]] <- as(tbl[[col_name]], val_class)
   }
 
