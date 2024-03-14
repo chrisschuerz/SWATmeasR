@@ -89,19 +89,25 @@ measr_project <- R6Class(
       #'   for `'rel'` (release decision table), `'sed'` for sediment.res
       #'   parametrisations, and `'nut'` for nutrients.res parametrisations can
       #'   be defined.
-      #' - `'wetland'`: A pond definition table includes all definitions for
-      #'   pond locations. The `wetland` table must provide the columns `hru_id`.
-      #'   Optionally, water from channels can be routed into a wetland. And
-      #'   the wetland's connectivity can be changed to a channel. In that case
-      #'   `to_cha_id`, and `from_cha_id` must be defined. The hydrology.wet
-      #'   parameters for a wetland and the pointers for `'rel'` (release
-      #'     decision table), `'sed'` for sediment.res parametrisations, and
-      #'     `'nut'` for nutrients.res parametrisations can be defined.
+      #' - `'constr_wetland'`: A constructed wetland is implemented the same way
+      #'   as a pond. Thus the same definitions like for the pond apply for a
+      #'   constructed wetland. As a constructed wetland is considered to be part
+      #'   of the channel/reservoir network, the definitions of `to_cha_id` and
+      #'   `from_cha_id` are mandatory.
+      #' - `'wetland'`: A wetland definition table includes all definitions for
+      #'   wetland locations. The `wetland` table must provide the columns `hru_id`.
+      #'   Optionally, water from a wetland can be directly routed into a channel
+      #'   and overwrite the original routing of the wetland HRU. In that case
+      #'   `to_cha_id` must be defined. The hydrology.wet parameters for a
+      #'   wetland and the pointers for `'rel'` (release decision table),
+      #'   `'sed'` for sediment.res parametrisations, and  `'nut'` for
+      #'   nutrients.res parametrisations can be defined.
       #'
     #'
     #' @param file_path Path to the '.csv' or '.rds' definition file.
     #' @param type Type of the NSWRM which is defined by this input file. The
-    #'   type must be one of the options `'land_use'`, `'management'` `'pond'`.
+    #'   type must be one of the options `'land_use'`, `'management'`, `'pond'`,
+    #'   `'constr_wetland'`, or `'wetland'`.
     #' @param overwrite Overwrite existing definition table? Default is `FALSE`.
     #' If `TRUE` existing definition table can be overwritten.
     #'
