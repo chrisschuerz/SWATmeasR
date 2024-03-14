@@ -71,7 +71,9 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs, overwrite) {
   # Replace land objects with pond objects ----------------------------------
   pond_loc_sel <- filter(nswrm_loc_sel, type == 'pond')
   if(nrow(pond_loc_sel) > 0) {
-    pond_def_sel <- filter(nswrm_defs$pond, hru_id %in% unlist(pond_loc_sel$obj_id))
+    pond_def_match <- map_lgl(nswrm_defs$pond$hru_id,
+                              ~ match_ids(pond_loc_sel$obj_id, .x))
+    pond_def_sel <- nswrm_defs$pond[pond_def_match,]
     res_res_sel  <- select(pond_def_sel, rel:nut)
     hyd_res_sel  <- select(pond_def_sel, area_ps:shp_co2)
 

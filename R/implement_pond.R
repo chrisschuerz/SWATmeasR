@@ -60,8 +60,8 @@ replace_by_ponds <- function(swat_inputs, hru_id, to_cha_id, from_cha_id,
     rtu_con_chg <- get_chg_ids_pond(swat_inputs$rout_unit.con, hru_id)
 
     for (i in 1:length(hru_id)) {
-      hru_i <- hru_id[i]
-      to_cha_i <- to_cha_id[i]
+      hru_i <- unlist(hru_id[i])
+      to_cha_i <- unlist(to_cha_id[i])
       from_cha_i <- unlist(from_cha_id[i])
       res_res_pnd_i <- res_res_pnd[i, ]
       hyd_res_pnd_i <- hyd_res_pnd[i, ]
@@ -120,31 +120,31 @@ replace_by_ponds <- function(swat_inputs, hru_id, to_cha_id, from_cha_id,
 #' @keywords internal
 #'
 check_arguments_pond <- function(swat_inputs, hru_id, to_cha_id, from_cha_id) {
-  stopifnot(is.numeric(hru_id))
-  stopifnot(is.numeric(to_cha_id))
-  stopifnot(length(hru_id) == length(to_cha_id))
+  # stopifnot(is.numeric(hru_id))
+  # stopifnot(is.numeric(to_cha_id))
+  # stopifnot(length(hru_id) == length(to_cha_id))
 
-  if(!is.null(from_cha_id)) {
-    if(length(hru_id) == 1) {
-      if(is.list(from_cha_id) & length(from_cha_id) != 1) {
-        stop("If a single HRUs should be replaced by a pond, then 'from_cha_id' ",
-             "must be either a vector or a list with length = 1.")
-      }
-    } else if (length(hru_id) > 1 & !is.list(from_cha_id)){
-      stop("If multiple HRUs should be replaced by ponds, then 'from_cha_id' ",
-           "must be of type 'list'.")
-    } else if (length(hru_id) != length(to_cha_id)) {
-      stop("If multiple HRUs should be replaced by ponds, then the list ",
-           "'from_cha_id' must have the same length as 'hru_id'.")
-    }
-  }
+  # if(!is.null(from_cha_id)) {
+  #   if(length(hru_id) == 1) {
+  #     if(is.list(from_cha_id) & length(from_cha_id) != 1) {
+  #       stop("If a single HRUs should be replaced by a pond, then 'from_cha_id' ",
+  #            "must be either a vector or a list with length = 1.")
+  #     }
+  #   } else if (length(hru_id) > 1 & !is.list(from_cha_id)){
+  #     stop("If multiple HRUs should be replaced by ponds, then 'from_cha_id' ",
+  #          "must be of type 'list'.")
+  #   } else if (length(hru_id) != length(to_cha_id)) {
+  #     stop("If multiple HRUs should be replaced by ponds, then the list ",
+  #          "'from_cha_id' must have the same length as 'hru_id'.")
+  #   }
+  # }
 
   res_names <- swat_inputs$reservoir.res$name
   pnd_ids <- as.integer(gsub('pnd', '', res_names[grepl('pnd[:0-9:]+',
                                                         res_names)]))
-  is_pond <- hru_id %in% pnd_ids
+  is_pond <- map_int(hru_id, min) %in% pnd_ids
   if (any(is_pond)) {
-    warning('The HRUs with the IDs ', paste(hru_id[is_pond], collapse = ', '),
+    warning('The HRUs with the IDs ', paste(unlist(hru_id[is_pond]), collapse = ', '),
             ' were already replaced by ponds and are skipped.')
   }
 
@@ -184,9 +184,9 @@ get_chg_ids_pond <- function(con_tbl, hru_ids) {
     arrange(id) %>%
     mutate(con_id = rep(1:n_con, nrow(con_tbl)))
 
-  con_chg <- map_df(hru_ids,
-                    ~ filter(con_ids, obj_typ == 'ru' & obj_id == .x)) %>%
-    select(obj_id, id, con_id)
+  con_chg <- con_ids %>%
+    filter(., obj_typ == 'ru' & obj_id %in% unlist(hru_ids)) %>%
+    select(., obj_id, id, con_id)
 
   return(con_chg)
 }
@@ -211,7 +211,7 @@ get_chg_ids_pond <- function(con_tbl, hru_ids) {
 #' @keywords internal
 #'
 update_rtu_con_pond <- function(rtu_con, rtu_con_chg, hru_id, res_id) {
-  chg_i <- filter(rtu_con_chg, obj_id == hru_id)
+  chg_i <- filter(rtu_con_chg, obj_id %in% hru_id)
 
   if(nrow(chg_i) > 0) {
     for (i in 1:nrow(chg_i)) {
@@ -226,26 +226,20 @@ update_rtu_con_pond <- function(rtu_con, rtu_con_chg, hru_id, res_id) {
   }
 
   # Set the number of connections for the replaced object to 0
-  rtu_con[rtu_con$id == hru_id, ]$out_tot <- 0
+  rtu_con[rtu_con$id %in% hru_id, ]$out_tot <- 0
 
+  # Get the maximum number of connections
+  n_con <- (ncol(rtu_con)-13)/4
   # Set all object types for connections from the replaced object to an empty string
-  rtu_con[rtu_con$id == hru_id,
-          paste0('obj_typ_', 1:((ncol(rtu_con)-13)/4))] <- ''
-
+  rtu_con[rtu_con$id %in% hru_id, paste0('obj_typ_', 1:n_con)] <- ''
   # Set all object ids for connections from the replaced object to NA
-  rtu_con[rtu_con$id == hru_id,
-          paste0('obj_id_', 1:((ncol(rtu_con)-13)/4))] <- NA_integer_
-
+  rtu_con[rtu_con$id %in% hru_id, paste0('obj_id_', 1:n_con)] <- NA_integer_
   # Set all hydrology types for connections from the replaced object to an empty string
-  rtu_con[rtu_con$id == hru_id,
-          paste0('hyd_typ_', 1:((ncol(rtu_con)-13)/4))] <- ''
-
+  rtu_con[rtu_con$id %in% hru_id, paste0('hyd_typ_', 1:n_con)] <- ''
   # Set all fractions for connections from the replaced object to NA
-  rtu_con[rtu_con$id == hru_id,
-          paste0('frac_', 1:((ncol(rtu_con)-13)/4))] <- NA
-
+  rtu_con[rtu_con$id %in% hru_id, paste0('frac_', 1:n_con)] <- NA_real_
   #Set area of replaced object to minimum value
-  rtu_con[rtu_con$id == hru_id, ]$area <- 0.00001
+  rtu_con[rtu_con$id %in% hru_id, ]$area <- 0.00001
 
   return(rtu_con)
 }
@@ -274,14 +268,17 @@ update_cha_con_pond <- function(cha_con, from_cha_id, res_id) {
   cha_con[cha_con$id %in% from_cha_id,]$out_tot <- 1L
   cha_con[cha_con$id %in% from_cha_id,]$obj_typ_1 <- 'res'
   cha_con[cha_con$id %in% from_cha_id,]$obj_id_1 <- res_id
+  cha_con[cha_con$id %in% from_cha_id,]$hyd_typ_1 <- 'tot'
   cha_con[cha_con$id %in% from_cha_id,]$frac_1 <- 1.0
 
   # Delete all other connections which of the channels which are now
   # routed into the reservoir.
-  cha_con[cha_con$id %in% from_cha_id,14 + 4*(1:(n_con-1))] <- ''
-  cha_con[cha_con$id %in% from_cha_id,15 + 4*(1:(n_con-1))] <- NA
-  cha_con[cha_con$id %in% from_cha_id,16 + 4*(1:(n_con-1))] <- ''
-  cha_con[cha_con$id %in% from_cha_id,17 + 4*(1:(n_con-1))] <- NA
+  if(n_con > 1) {
+    cha_con[cha_con$id %in% from_cha_id, paste0('obj_typ_', 2:n_con)] <- ''
+    cha_con[cha_con$id %in% from_cha_id, paste0('obj_id_', 2:n_con)] <- NA_integer_
+    cha_con[cha_con$id %in% from_cha_id, paste0('hyd_typ_', 2:n_con)] <- ''
+    cha_con[cha_con$id %in% from_cha_id, paste0('frac_', 2:n_con)] <- NA_real_
+  }
 
   return(cha_con)
 }
@@ -301,19 +298,30 @@ update_cha_con_pond <- function(cha_con, from_cha_id, res_id) {
 #' @returns Updated reservoir.con input table with new line for the new
 #'   reservoir.
 #'
-#' @importFrom dplyr bind_rows filter mutate select %>%
+#' @importFrom dplyr bind_rows filter mutate select summarise %>%
 #'
 #' @keywords internal
 #'
 update_res_con_pond <- function(res_con, rtu_con, hru_id, to_cha_id, res_id) {
   rtu_to_res <- rtu_con %>%
-    filter(., id == hru_id) %>%
+    filter(., id %in% hru_id) %>%
     select(., id:out_tot) %>%
     mutate(id = res_id,
-           name = paste0('pnd', hru_id),
-           obj_id = id,
-           out_tot = 1L,
-           obj_typ_1 = 'sdc',
+           name = paste0('pnd', min(hru_id))) %>%
+    summarise(id = id[1],
+              name = name[1],
+              gis_id = gis_id[1],
+              area = sum(area),
+              lat = lat[1],
+              lon = lon[1],
+              elev = mean(elev),
+              obj_id = id[1],
+              wst = wst[1],
+              cst = cst[1],
+              ovfl = ovfl[1],
+              rule = rule[1],
+              out_tot = 1) %>%
+    mutate(obj_typ_1 = 'sdc',
            obj_id_1 = to_cha_id,
            hyd_typ_1 = 'tot',
            frac_1 = 1.0)
@@ -343,7 +351,7 @@ update_res_con_pond <- function(res_con, rtu_con, hru_id, to_cha_id, res_id) {
 #'
 update_res_res_pond <- function(res_res, res_res_pnd, hru_id) {
   res_add <- tibble(id = max(res_res$id, 0) + 1,
-                    name = paste0('pnd', hru_id),
+                    name = paste0('pnd', min(hru_id)),
                     init = 'initres1',
                     hyd  = name) %>%
     bind_cols(., res_res_pnd)
@@ -375,7 +383,7 @@ update_res_res_pond <- function(res_res, res_res_pnd, hru_id) {
 update_hyd_res_pond <- function(hyd_res, hyd_res_pnd, hru_id, area) {
   # The implemented parameters are still default paremters. In a future version
   # the parameters should be input by the user via the pond definition file.
-  hyd_add <- tibble(name = paste0('pnd', hru_id),
+  hyd_add <- tibble(name = paste0('pnd', min(hru_id)),
                     yr_op = 1,
                     mon_op = 1) %>%
     bind_cols(., hyd_res_pnd)
@@ -398,7 +406,7 @@ update_hyd_res_pond <- function(hyd_res, hyd_res_pnd, hru_id, area) {
 #' @keywords internal
 #'
 update_hru_con_pond <- function(hru_con, hru_id) {
-  hru_con[hru_con$id == hru_id, ]$area <- 0.00001
+  hru_con[hru_con$id %in% hru_id, ]$area <- 0.00001
   return(hru_con)
 }
 

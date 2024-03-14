@@ -62,7 +62,6 @@ plural <- function(n) {
 #'
 '%&%' <- function(a, b) paste0(a, b)
 
-
 #' Convert number to character and add leading zeros based on existing IDs
 #'
 #' @param i ID i which is converted
@@ -76,4 +75,19 @@ add_lead_zeros <- function(i, ids) {
   n_digit <- nchar(as.character(max(ids)))
   num_fmt <- paste0('%0', n_digit, 'd')
   sprintf(num_fmt, i)
+}
+
+#' Find the same sequence of ids in a vector compared to vectors in a list.
+#'
+#' @param id_list List of id vectors
+#' @param id_vct Vector of ds
+#'
+#' @returns A boolean vector which shows the matching id sequences.
+#'
+#' @importFrom purrr map_lgl
+#'
+#' @keywords internal
+#'
+match_ids <- function(id_list, id_vct) {
+  any(map_lgl(id_list, ~all(.x %in% id_vct)))
 }

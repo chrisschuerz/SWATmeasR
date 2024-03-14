@@ -98,7 +98,7 @@ load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
   # location definition.
   hru_pond_ids <- nswrm_loc$obj_id[nswrm_loc$type == 'pond']
   hru_pond_def_miss <- !map_lgl(nswrm_defs$pond$hru_id,
-                                ~ match_pond_hru_ids(hru_pond_ids, .x))
+                                ~ match_ids(hru_pond_ids, .x))
 
   if(any(hru_pond_def_miss)) {
     stop("Pond locations ('obj_id's) were defined ",
@@ -463,9 +463,10 @@ load_mgt_def <- function(file_path, swat_inputs) {
 #'
 #' @returns The loaded pond/wetland definition table as a tibble.
 #'
-#' @importFrom dplyr left_join mutate select %>%
+#' @importFrom dplyr group_by left_join mutate select summarise %>%
 #' @importFrom purrr map map_lgl
 #' @importFrom readr cols col_guess read_csv
+#' @importFrom tidyr unnest
 #' @importFrom tidyselect all_of
 #'
 #' @keywords internal
@@ -758,8 +759,4 @@ check_settings_column <- function(tbl, col_name, val_class, measr_type) {
   }
 
   return(tbl)
-}
-
-match_pond_hru_ids <- function(hru_ids_pond, hru_ids_loc_i) {
-  any(map_lgl(hru_ids_pond, ~all(.x %in% hru_ids_loc_i)))
 }
