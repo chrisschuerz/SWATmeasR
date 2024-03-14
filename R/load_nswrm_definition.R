@@ -146,7 +146,8 @@ load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
 #'
 #' @param file_path Path to the '.csv' or '.rds' definition file.
 #' @param type Type of the NSWRM which is defined by this input file. The
-#'   type must be one of the options `'land_use'`, `'pond'`.
+#'   type must be one of the options `'land_use'`, `'management'`,`'pond'`,
+#'   `'wetland'`, or `'constr_wetland'`.
 #' @param nswrm_defs List with already loaded NSWRM definition tables
 #' @param swat_inputs List with SWAT+ input files.
 #' @param overwrite Overwrite existing definition table? If `TRUE` existing
@@ -180,8 +181,9 @@ load_nswrm_def <- function(file_path, type, nswrm_defs, swat_inputs, overwrite) 
 
   # For testing so far only the two types land_use and pond are implemented.
   # Will be updated when additional routines are inlcuded.
-  if (!type %in% c('land_use', 'management', 'pond', 'wetland')) {
-    stop("'type' must be 'land_use', 'management', 'pond', or 'wetland'.")
+  if (!type %in% c('land_use', 'management', 'pond',
+                   'wetland', 'constr_wetland')) {
+    stop("'type' must be 'land_use', 'management', 'pond', 'wetland', or 'constr_wetland'.")
   }
 
   if (type %in% names(nswrm_defs) & !overwrite) {
@@ -211,6 +213,12 @@ load_nswrm_def <- function(file_path, type, nswrm_defs, swat_inputs, overwrite) 
                                                    overwrite)
   } else if (type == 'wetland') {
     nswrm_defs$wetland <- load_water_def(file_path, swat_inputs, type)
+    nswrm_defs$nswrm_lookup <- update_nswrm_lookup(nswrm_defs$nswrm_lookup,
+                                                   type,
+                                                   type,
+                                                   overwrite)
+  } else if (type == 'constr_wetland') {
+    nswrm_defs$constr_wetland <- load_water_def(file_path, swat_inputs, type)
     nswrm_defs$nswrm_lookup <- update_nswrm_lookup(nswrm_defs$nswrm_lookup,
                                                    type,
                                                    type,
@@ -475,6 +483,12 @@ load_water_def <- function(file_path, swat_inputs, type) {
   def_tbl <- read_csv(file_path, lazy = FALSE,
                        col_types = cols(col_guess()),
                        na = c('', 'NA'))
+  # Land object type wetlands cannot have cha_from_ids. This is now checked
+  if (type == 'wetland' & 'cha_from_id' %in% names(def_tbl)) {
+    stop("'cha_from_id' cannot be defined for type 'wetland' as wetlands cannot",
+         ' \n receive water from channels. If this is required please implement',
+         " \n thos as 'constr_wetland'.")
+  }
 
   # Initialization and checks of input table columns
   def_tbl <- check_settings_column(def_tbl, 'hru_id', 'integer', type)
@@ -482,14 +496,14 @@ load_water_def <- function(file_path, swat_inputs, type) {
     def_tbl <- check_settings_column(def_tbl, 'lu_mgt', 'character', 'all')
   }
   def_tbl <- check_settings_column(def_tbl, 'cha_to_id', 'integer', type)
-  if (!'cha_from_id' %in% names(def_tbl)) {
+  if (!'cha_from_id' %in% names(def_tbl) & type != 'wetland') {
     def_tbl <- mutate(def_tbl, cha_from_id = NA_integer_)
-  } else {
+  } else if (type != 'wetland') {
     def_tbl$cha_from_id <- map(def_tbl$cha_from_id,
                                 ~ eval(parse(text = paste0('c(', .x, ')')))) %>%
       map(., ~as.integer(.x))
   }
-  if(type == 'pond') {
+  if(type %in% c('pond', 'constr_wetland')) {
     hyd_par_names <- names(swat_inputs$hydrology.res)[4:11]
   } else if (type == 'wetland') {
     hyd_par_names <- names(swat_inputs$hydrology.wet)[2:11]
@@ -503,24 +517,25 @@ load_water_def <- function(file_path, swat_inputs, type) {
   def_tbl <- check_settings_column(def_tbl, 'sed', 'character', 'all')
   def_tbl <- check_settings_column(def_tbl, 'nut', 'character', 'all')
 
-  def_tbl <- select(def_tbl, hru_id, any_of('lu_mgt'), cha_to_id, cha_from_id,
-                    all_of(hyd_par_names), rel, sed, nut)
+  def_tbl <- select(def_tbl, hru_id, any_of('lu_mgt'), cha_to_id,
+                    any_of('cha_from_id'), all_of(hyd_par_names), rel, sed, nut)
 
   hru_id_na <- is.na(def_tbl$hru_id)
   is_no_hru_id    <- map_lgl(def_tbl$hru_id, ~ any(!.x  %in% swat_inputs$hru_data.hru$id))
-  if(type == 'pond') {
+  if(type != 'wetland') {
     is_no_lu_mgt <- FALSE
     cha_id_na <- is.na(def_tbl$cha_to_id)
     is_no_cha_to_id <- ! def_tbl$cha_to_id %in% swat_inputs$chandeg.con$id
+    is_no_cha_fr_id <- map_lgl(def_tbl$cha_from_id,
+                         ~ !all(is.na(.x) | .x %in% swat_inputs$chandeg.con$id))
   } else {
     is_no_lu_mgt <- ! (def_tbl$lu_mgt %in% swat_inputs$landuse.lum$name |
                          is.na(def_tbl$lu_mgt))
     cha_id_na <- FALSE
     is_no_cha_to_id <- ! (def_tbl$cha_to_id %in% swat_inputs$chandeg.con$id |
                           is.na(def_tbl$cha_to_id))
+    is_no_cha_fr_id <- FALSE
   }
-  is_no_cha_fr_id <- map_lgl(def_tbl$cha_from_id,
-                       ~ !all(is.na(.x) | .x %in% swat_inputs$chandeg.con$id))
   is_no_rel_name  <- ! (def_tbl$rel %in% swat_inputs$res_rel.dtl_names |
                         is.na(def_tbl$rel))
   is_no_sed_name  <- ! (def_tbl$sed %in% swat_inputs$sediment.res$name |
@@ -604,7 +619,7 @@ load_water_def <- function(file_path, swat_inputs, type) {
 
   hru_area <- select(swat_inputs$hru.con, id, area)
 
-  if(type == 'pond') {
+  if(type %in% c('pond', 'constr_wetland')) {
     rel_dflt <- ifelse('drawdown_days' %in% swat_inputs$res_rel.dtl_names,
                        'drawdown_days',
                        'null')
@@ -613,7 +628,7 @@ load_water_def <- function(file_path, swat_inputs, type) {
                        'wetland',
                        'null')
   }
-  type_lbl <- ifelse(type == 'pond', 'res', 'wet')
+  type_lbl <- ifelse(type %in% c('pond', 'constr_wetland'), 'res', 'wet')
   sed_dflt <- ifelse(paste0('sed', type_lbl, 1) %in% swat_inputs$sediment.res$name,
                      paste0('sed', type_lbl, 1),
                      'null')
@@ -622,7 +637,7 @@ load_water_def <- function(file_path, swat_inputs, type) {
                      'null')
 
   # Initialize pond and wetland parameters and pointers
-  if (type == 'pond') {
+  if (type %in% c('pond', 'constr_wetland')) {
     pond_area <- def_tbl %>%
       select(hru_id) %>%
       mutate(id = 1:nrow(.)) %>%
@@ -746,11 +761,11 @@ check_settings_column <- function(tbl, col_name, val_class, measr_type) {
   if(col_name == 'hru_id' & ! col_name %in% names(tbl)) {
     stop("The column 'hru_id' is not defined.")
   }
-  if (! col_name %in% names(tbl) & measr_type == 'pond') {
+  if (! col_name %in% names(tbl) & measr_type %in% c('pond', 'constr_wetland')) {
     stop(paste0("'", col_name,"' must be defined for all ponds."))
   } else if (!col_name %in% names(tbl) | all(is.na(tbl[[col_name]]))) {
     tbl[[col_name]] <- as(NA, val_class)
-  } else if (measr_type == 'pond') {
+  } else if (measr_type %in% c('pond', 'constr_wetland')) {
     tbl[[col_name]] <- map(tbl[[col_name]],
                                ~ eval(parse(text = paste0('c(', .x, ')')))) %>%
       map(., ~as.integer(.x))
