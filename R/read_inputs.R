@@ -77,6 +77,8 @@ read_swat_inputs <- function(project_path) {
   input_list$file_updated <- rep(FALSE, length(input_list))
   names(input_list$file_updated) <- file_names
 
+  input_list$files_written <- FALSE
+
   return(input_list)
 }
 

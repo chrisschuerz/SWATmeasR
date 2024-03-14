@@ -253,7 +253,7 @@ Save the SWATmeasR project in the SWAT+ project folder.
 \subsection{Method \code{reset()}}{
 Reset the changes applied to the SWAT+ input files.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{measr_project$reset(write_files = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{measr_project$reset()}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{

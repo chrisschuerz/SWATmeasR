@@ -200,6 +200,7 @@ measr_project <- R6Class(
     #' Write updated SWAT+ input files to `project_path`.
     #'
     write_swat_inputs = function(){
+      self$.data$model_setup$modified_inputs$files_written <- TRUE
       write_swat_inputs(self$.data$model_setup$modified_inputs,
                         self$.data$model_setup$modified_inputs$file_updated,
                         self$.data$meta$project_path)
@@ -224,15 +225,20 @@ measr_project <- R6Class(
     #'  resets the tables in the `measr_project`. `TRUE` also resets the
     #'  respective input files in `project_path`.
     #'
-    reset = function(write_files = FALSE){
-      if(write_files) {
+    reset = function(){
+      if(self$.data$model_setup$modified_inputs$files_written) {
+        cat('Resetting input files in project folder...')
         write_swat_inputs(self$.data$model_setup$original_inputs,
                           self$.data$model_setup$modified_inputs$file_updated,
                           self$.data$meta$project_path)
+        self$.data$model_setup$modified_inputs$files_written <- FALSE
+        cat(' Done!\n')
       }
+      cat('Resetting tables in measR project...')
       self$.data$model_setup$modified_inputs <-
         self$.data$model_setup$original_inputs
       self$save()
+      cat(' Done!\n')
     }
   )
 )
