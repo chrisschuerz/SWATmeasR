@@ -4,7 +4,7 @@
 \alias{update_res_con_pond}
 \title{Update the reservoir.con input table.}
 \usage{
-update_res_con_pond(res_con, rtu_con, hru_id, to_cha_id, res_id)
+update_res_con_pond(res_con, rtu_con, hru_id, to_cha_id, res_id, label)
 }
 \arguments{
 \item{res_con}{reservoir.con input table}
@@ -16,6 +16,8 @@ update_res_con_pond(res_con, rtu_con, hru_id, to_cha_id, res_id)
 \item{to_cha_id}{ID of channel to which water from reservoir is routed.}
 
 \item{res_id}{New ID of the pond (reservoir) which replaces the land object.}
+
+\item{label}{Either 'pnd' for pond or 'cwl' for constructed wetlands.}
 }
 \value{
 Updated reservoir.con input table with new line for the new

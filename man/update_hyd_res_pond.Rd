@@ -4,7 +4,7 @@
 \alias{update_hyd_res_pond}
 \title{Update the hydrology.res input table.}
 \usage{
-update_hyd_res_pond(hyd_res, hyd_res_pnd, hru_id, area)
+update_hyd_res_pond(hyd_res, hyd_res_pnd, hru_id, area, label)
 }
 \arguments{
 \item{hyd_res}{hydrology.res input table.}
@@ -14,6 +14,8 @@ update_hyd_res_pond(hyd_res, hyd_res_pnd, hru_id, area)
 \item{hru_id}{ID of the HRU which is replaced by a pond.}
 
 \item{area}{Area of the replaced land object in ha.}
+
+\item{label}{Either 'pnd' for pond or 'cwl' for constructed wetlands.}
 }
 \value{
 Updated hydrology.res input table.

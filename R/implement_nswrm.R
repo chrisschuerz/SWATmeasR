@@ -82,7 +82,27 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs, overwrite) {
                                     to_cha_id   = pond_def_sel$cha_to_id,
                                     from_cha_id = pond_def_sel$cha_from_id,
                                     res_res_pnd = res_res_sel,
-                                    hyd_res_pnd = hyd_res_sel)
+                                    hyd_res_pnd = hyd_res_sel,
+                                    type = 'pond')
+  }
+  # -------------------------------------------------------------------------
+
+  # Replace land objects with constructed wetland objects -------------------
+  cwtl_loc_sel <- filter(nswrm_loc_sel, type == 'constr_wetland')
+  if(nrow(cwtl_loc_sel) > 0) {
+    cwtl_def_match <- map_lgl(nswrm_defs$constr_wetland$hru_id,
+                              ~ match_ids(cwtl_loc_sel$obj_id, .x))
+    cwtl_def_sel <- nswrm_defs$constr_wetl[cwtl_def_match,]
+    res_res_sel  <- select(cwtl_def_sel, rel:nut)
+    hyd_res_sel  <- select(cwtl_def_sel, area_ps:shp_co2)
+
+    swat_inputs <- replace_by_ponds(swat_inputs,
+                                    hru_id      = cwtl_def_sel$hru_id,
+                                    to_cha_id   = cwtl_def_sel$cha_to_id,
+                                    from_cha_id = cwtl_def_sel$cha_from_id,
+                                    res_res_pnd = res_res_sel,
+                                    hyd_res_pnd = hyd_res_sel,
+                                    type = 'constr_wetland')
   }
   # -------------------------------------------------------------------------
 

@@ -10,7 +10,8 @@ replace_by_ponds(
   to_cha_id,
   from_cha_id,
   res_res_pnd,
-  hyd_res_pnd
+  hyd_res_pnd,
+  type
 )
 }
 \arguments{
@@ -43,6 +44,8 @@ or a vector to reroute multiple channels into the implemented pond. If
 \code{hru_id}. If for a respective \code{hru_id} no channels should be rerouted that
 list element is \code{NA}, otherwise the list element can be a value or a
 vector.}
+
+\item{type}{Either one of the two pond like types 'pond' or 'constr_wetland'.}
 }
 \value{
 The \code{swat_inputs} list with updated input tables which include all

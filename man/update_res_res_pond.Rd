@@ -4,7 +4,7 @@
 \alias{update_res_res_pond}
 \title{Update the reservoir.res input table.}
 \usage{
-update_res_res_pond(res_res, res_res_pnd, hru_id)
+update_res_res_pond(res_res, res_res_pnd, hru_id, label)
 }
 \arguments{
 \item{res_res}{reservoir.res input table}
@@ -12,6 +12,8 @@ update_res_res_pond(res_res, res_res_pnd, hru_id)
 \item{res_res_pnd}{table with rel, sed, and nut pointers for added pond.}
 
 \item{hru_id}{ID of the HRU which is replaced by a pond.}
+
+\item{label}{Either 'pnd' for pond or 'cwl' for constructed wetlands.}
 }
 \value{
 Updated reservoir.res input table.

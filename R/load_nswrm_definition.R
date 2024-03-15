@@ -97,13 +97,25 @@ load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
   # Updated approach to compare list ids in pond definition and
   # location definition.
   hru_pond_ids <- nswrm_loc$obj_id[nswrm_loc$type == 'pond']
-  hru_pond_def_miss <- !map_lgl(nswrm_defs$pond$hru_id,
-                                ~ match_ids(hru_pond_ids, .x))
+  # hru_pond_def_miss <- !map_lgl(nswrm_defs$pond$hru_id,
+  #                               ~ match_ids(hru_pond_ids, .x))
+  hru_pond_def_miss <- !map_lgl(hru_pond_ids,
+                                ~ match_ids(nswrm_defs$pond$hru_id, .x))
 
   if(any(hru_pond_def_miss)) {
     stop("Pond locations ('obj_id's) were defined ",
          "for which a definition in the pond setting input file was missing:\n",
          paste(hru_pond_ids[hru_pond_def_miss], collapse = ', '))
+  }
+
+  hru_cwtl_ids <- nswrm_loc$obj_id[nswrm_loc$type == 'constr_wetland']
+  hru_cwtl_def_miss <- !map_lgl(hru_cwtl_ids,
+                                ~ match_ids(nswrm_defs$constr_wetland$hru_id, .x))
+
+  if(any(hru_cwtl_def_miss)) {
+    stop("Constructed wetland locations ('obj_id's) were defined ",
+         "for which a definition in the constr_wetland setting input file was missing:\n",
+         paste(hru_cwtl_ids[hru_cwtl_def_miss], collapse = ', '))
   }
 
   hru_wetl_ids <- unique(unlist(nswrm_loc$obj_id[nswrm_loc$type == 'wetland']))
