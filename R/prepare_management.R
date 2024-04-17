@@ -211,9 +211,9 @@ prepare_management_scenario_inputs <- function(project_path, status_quo,
     for (i in 1:nrow(hru_lum)) {
       lum_squo_i <- hru_lum$lu_mgt_quo[i]
       lum_scen_i <- hru_lum$lu_mgt_scn[i]
-      mgt_squo_i <- luse_lum_squo$mgt[luse_lum_scen$name == lum_squo_i]
+      mgt_squo_i <- luse_lum_squo$mgt[luse_lum_squo$name == lum_squo_i]
       mgt_scen_i <- scen_files[[scen_i]]$landuse.lum$mgt[
-        scen_files[[scen_i]]$landuse.lum$name == lum_squo_i]
+        scen_files[[scen_i]]$landuse.lum$name == lum_scen_i]
 
       if(all(mgt_squo_i != 'null') & all(mgt_scen_i != 'null')) {
         sch_squo <- add_op_date(schedule_squo[[mgt_squo_i]], start_year)
