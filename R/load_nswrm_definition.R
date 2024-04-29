@@ -659,10 +659,10 @@ load_water_def <- function(file_path, swat_inputs, type) {
       summarise(., area = sum(area))
 
     def_tbl <- def_tbl %>%
-      mutate(area_ps = pond_area$area,
-             vol_ps  = ifelse(is.na(vol_ps), 10*area_ps, vol_ps),
-             area_es = ifelse(is.na(area_es), 1.15*area_ps, area_es),
-             vol_es  = ifelse(is.na(vol_es), 10*area_es, vol_es),
+      mutate(area_ps = ifelse(is.na(vol_ps), 0.8*pond_area$area, area_ps),
+             vol_ps  = ifelse(is.na(vol_ps), 2*area_ps, vol_ps),
+             area_es = ifelse(is.na(area_es), pond_area$area, area_es),
+             vol_es  = ifelse(is.na(vol_es), 3*area_es, vol_es),
              k       = ifelse(is.na(k), 0, k),
              evap_co = ifelse(is.na(evap_co), 0.6, evap_co),
              shp_co1 = ifelse(is.na(shp_co1), 0, shp_co1),
@@ -671,6 +671,19 @@ load_water_def <- function(file_path, swat_inputs, type) {
              sed     = ifelse(is.na(sed), sed_dflt, sed),
              nut     = ifelse(is.na(nut), nut_dflt, nut)
              )
+    if(any(def_tbl$area_ps > pond_area$area)) {
+      stop("'area_ps' cannot be larger than the land area which is replaced by a pond.")
+    }
+    if(any(def_tbl$area_es > pond_area$area)) {
+      stop("'area_es' cannot be larger than the land area which is replaced by a pond.")
+    }
+    if(any(def_tbl$area_ps > def_tbl$area_es)) {
+      stop("'area_ps' cannot be larger than 'area_es'.")
+    }
+    if(any(def_tbl$vol_ps > def_tbl$vol_es)) {
+      stop("'vol_ps' cannot be larger than 'vol_es'.")
+    }
+
   } else if (type == 'wetland') {
     def_tbl <- def_tbl %>%
       mutate(hru_ps      = ifelse(is.na(hru_ps),  0.1, hru_ps),
@@ -688,6 +701,13 @@ load_water_def <- function(file_path, swat_inputs, type) {
              nut     = ifelse(is.na(nut), nut_dflt, nut)
 
              )
+
+    if(any(def_tbl$hru_ps > def_tbl$hru_es)) {
+      stop("'hru_ps' cannot be larger than 'hru_es'.")
+    }
+    if(any(def_tbl$dep_ps > def_tbl$dep_es)) {
+      stop("'dep_ps' cannot be larger than 'dep_es'.")
+    }
   }
 
   return(def_tbl)
