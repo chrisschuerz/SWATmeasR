@@ -337,11 +337,15 @@ update_res_con_pond <- function(res_con, rtu_con, hru_id, to_cha_id, res_id, lab
               cst = cst[1],
               ovfl = ovfl[1],
               rule = rule[1],
-              out_tot = 1) %>%
+              out_tot = 2) %>%
     mutate(obj_typ_1 = 'sdc',
            obj_id_1 = to_cha_id,
            hyd_typ_1 = 'tot',
-           frac_1 = 1.0)
+           frac_1 = 1.0,
+           obj_typ_2 = 'aqu',
+           obj_id_2 = 1,
+           hyd_typ_2 = 'rhg',
+           frac_2 = 1.0)
 
   res_con <- bind_rows(res_con, rtu_to_res)
 
