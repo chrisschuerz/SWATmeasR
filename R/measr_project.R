@@ -55,7 +55,7 @@ measr_project <- R6Class(
 
       self$.data$meta$project_name <- project_name
       self$.data$meta$project_path <- project_path
-      self$data$meta$measr_version <- packageVersion('SWATmeasR')
+      self$.data$meta$measr_version <- packageVersion('SWATmeasR')
       self$.data$model_setup$original_inputs <-
         read_swat_inputs(project_path)
       self$.data$model_setup$modified_inputs <-
