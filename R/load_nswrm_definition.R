@@ -499,7 +499,7 @@ load_water_def <- function(file_path, swat_inputs, type) {
   if (type == 'wetland' & 'cha_from_id' %in% names(def_tbl)) {
     stop("'cha_from_id' cannot be defined for type 'wetland' as wetlands cannot",
          ' \n receive water from channels. If this is required please implement',
-         " \n thos as 'constr_wetland'.")
+         " \n those as 'constr_wetland'.")
   }
 
   # Initialization and checks of input table columns
@@ -663,7 +663,7 @@ load_water_def <- function(file_path, swat_inputs, type) {
              vol_ps  = ifelse(is.na(vol_ps), 2*area_ps, vol_ps),
              area_es = ifelse(is.na(area_es), pond_area$area, area_es),
              vol_es  = ifelse(is.na(vol_es), 3*area_es, vol_es),
-             k       = ifelse(is.na(k), 0, k),
+             k       = ifelse(is.na(k), 1.0, k),
              evap_co = ifelse(is.na(evap_co), 0.6, evap_co),
              shp_co1 = ifelse(is.na(shp_co1), 0, shp_co1),
              shp_co2 = ifelse(is.na(shp_co2), 0, shp_co2),
