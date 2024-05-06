@@ -5,8 +5,7 @@
 #' parameterizing a wetland in `wetland.wet` and `hydrology.wet` and adding this
 #' wetland as surface storage in `hru-data.hru`. If an HRU was drained, the
 #' drainage is removed and a new entry in `landuse.lum` is generated for that
-#' HRU. Optionally, a `to_cha_id` or `from_cha_id` can be defined if channels
-#' should be rerouted into the wetland or the water from wetlands should be
+#' HRU. Optionally, a `to_cha_id` can be defined if water from wetlands should be
 #' routed directly into a channel.
 #'
 #' @param swat_inputs List with SWAT+ input files.
@@ -54,9 +53,6 @@ implement_wetlands <- function(swat_inputs, hru_id, to_cha_id, from_cha_id,
   # Exclude that HRUs/channels from the ones which will be replaced/modified/
   hru_id    <- hru_id[!is_wetl]
   to_cha_id <- to_cha_id[!is_wetl]
-  if(is.list(from_cha_id)) {
-    from_cha_id   <- from_cha_id[!is_wetl]
-  }
 
   # If there are HRUs remaining where wetlands should be added loop over all
   # land objects and update the respective input files.
@@ -67,7 +63,6 @@ implement_wetlands <- function(swat_inputs, hru_id, to_cha_id, from_cha_id,
       hru_i_chr <- add_lead_zeros(hru_i, swat_inputs$hru_data.hru$id)
 
       to_cha_i   <- to_cha_id[i]
-      from_cha_i <- unlist(from_cha_id[i])
 
       wet_wet_i <- wet_wet_sel[i, ]
       hyd_wet_i <- hyd_wet_sel[i, ]
@@ -102,12 +97,6 @@ implement_wetlands <- function(swat_inputs, hru_id, to_cha_id, from_cha_id,
                                                        to_cha_i,
                                                        has_drn,
                                                        hru_i)
-    }
-    if(!all(is.na(from_cha_i))) {
-      swat_inputs$file_updated['chandeg.con'] <- TRUE
-      swat_inputs$chandeg.con <- update_cha_con_wetl(swat_inputs$chandeg.con,
-                                                     from_cha_i,
-                                                     hru_i)
     }
     }
     # Set the input files which are adjusted by pond replacement to 'modified'
@@ -320,34 +309,6 @@ update_rtu_con_wetl <- function(rtu_con, to_cha_id, has_drn, hru_id) {
   }
 
   return(rtu_con)
-}
-
-#' Update the chandeg.con input table.
-#'
-#' In the case channel objects should be rerouted into the new wetland then the
-#' chandeg.con input file must be updated. For the channel which is rerouted
-#' into the wetland all connections are removed and the connection to the
-#' wetland is added.
-#'
-#' @param cha_con chandeg.con input table.
-#' @param from_cha_id Vector of channel IDs which should be routed into the new
-#'   wetland.
-#' @param hru_id HRU IDs to which surface water storage (wetland) will be added.
-#'
-#' @returns Updated chandeg.con table.
-#'
-#' @keywords internal
-#'
-update_cha_con_wetl <- function(cha_con, from_cha_id, hru_id) {
-  for(cha_i in from_cha_id) {
-    cha_con <- remove_connection(cha_con, from_cha_id, hyd_typ_rmv = 'tot')
-    cha_con <- add_connection(cha_con, from_cha_id,
-                              obj_typ_add = 'ru', obj_id_add = hru_id,
-                              hyd_typ_add = 'tot', frac_add = 1,
-                              position = 1)
-  }
-
-  return(cha_con)
 }
 
 #' Remove connections from a connectivity input table.

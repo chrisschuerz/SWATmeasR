@@ -57,8 +57,7 @@ Surface storage is added to the land objects defined by the \code{hru_id}, by
 parameterizing a wetland in \code{wetland.wet} and \code{hydrology.wet} and adding this
 wetland as surface storage in \code{hru-data.hru}. If an HRU was drained, the
 drainage is removed and a new entry in \code{landuse.lum} is generated for that
-HRU. Optionally, a \code{to_cha_id} or \code{from_cha_id} can be defined if channels
-should be rerouted into the wetland or the water from wetlands should be
+HRU. Optionally, a \code{to_cha_id} can be defined if water from wetlands should be
 routed directly into a channel.
 }
 \keyword{internal}

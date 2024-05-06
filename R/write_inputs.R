@@ -113,6 +113,18 @@ write_swat_inputs <- function(swat_inputs, file_updated, project_path) {
               paste0(project_path, '/reservoir.con'),
               fmt_res_con)
   }
+  if(file_updated['wetland.wet']) {
+    fmt_wet_wet <- c('%8d', '%-16s', rep('%16s', 5))
+    write_tbl(swat_inputs$wetland.wet,
+              paste0(project_path, '/wetland.wet'),
+              fmt_wet_wet)
+  }
+  if(file_updated['hydrology.wet']) {
+    fmt_hyd_wet <- c('%-16s', rep('%12.5f', 10))
+    write_tbl(swat_inputs$hydrology.wet,
+              paste0(project_path, '/hydrology.wet'),
+              fmt_hyd_wet)
+  }
 }
 
 #' Write SWAT+ input file which has a tabular structure.
