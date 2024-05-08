@@ -18,6 +18,10 @@ write_swat_inputs <- function(swat_inputs, file_updated, project_path) {
               paste0(project_path, '/object.cnt'),
               fmt_obj_cnt)
   }
+  if(file_updated['file.cio']) {
+    write_cio(swat_inputs$file.cio,
+              paste0(project_path, '/file.cio'))
+  }
   if(file_updated['landuse.lum']) {
     fmt_lu_lum <- c('%-20s', rep('%16s', 13))
     write_tbl(swat_inputs$landuse.lum,
@@ -219,6 +223,31 @@ write_tbl2 <- function(tbl, file_path, fmt_def, fmt_par) {
   file_head <- paste('SWAT+ input file updated with SWATmeasR at', Sys.time())
 
   input_file <- c(file_head, col_names, file_lines)
+
+  write_lines(input_file, file_path)
+}
+
+#' Write SWAT+ file.cio file.
+#'
+#' @param file_cio SWAT file.cio.
+#' @param file_path Write path of the SWAT+ input file.
+#'
+#' @returns Writes the file.cio as a text file in the file path.
+#'
+#' @importFrom dplyr %>%
+#' @importFrom purrr map map_chr
+#' @importFrom readr write_lines
+#'
+#' @keywords internal
+#'
+write_cio <- function(file_cio, file_path, fmt) {
+  file_lines <- file_cio %>%
+    map(., ~ sprintf('%-20s', .x)) %>%
+    map_chr(., ~ paste(.x, collapse = ' '))
+
+  file_head <- paste('SWAT+ input file updated with SWATmeasR at', Sys.time())
+
+  input_file <- c(file_head, file_lines)
 
   write_lines(input_file, file_path)
 }

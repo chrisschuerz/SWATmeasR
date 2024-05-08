@@ -71,6 +71,7 @@ replace_by_ponds <- function(swat_inputs, hru_id, to_cha_id, from_cha_id,
       hyd_res_pnd_i <- hyd_res_pnd[i, ]
 
       swat_inputs$object.cnt <- update_obj_cnt_pond(swat_inputs$object.cnt)
+      swat_inputs$file.cio   <- update_cio_pond(swat_inputs$file.cio)
 
       swat_inputs$reservoir.res <- update_res_res_pond(swat_inputs$reservoir.res,
                                                        res_res_pnd_i,
@@ -101,7 +102,7 @@ replace_by_ponds <- function(swat_inputs, hru_id, to_cha_id, from_cha_id,
     }
     # Set the input files which are adjusted by pond replacement to 'modified'
     # so that they will be written when writing output files.
-    swat_inputs$file_updated[c('object.cnt', 'reservoir.res', 'reservoir.con',
+    swat_inputs$file_updated[c('object.cnt', 'file.cio', 'reservoir.res', 'reservoir.con',
                                'hydrology.res', 'rout_unit.con', 'hru.con',
                                'chandeg.con')] <- TRUE
   }
@@ -205,6 +206,24 @@ get_chg_ids_pond <- function(con_tbl, hru_ids) {
     select(., obj_id, id, con_id)
 
   return(con_chg)
+}
+
+#' Update the file.cio input table.
+#'
+#' The reservoir input tables are added for the case they were missing, because
+#' no reservoirs were implemented in the initial model setup.
+#'
+#' @param file_cio List of file.cio lines.
+#'
+#' @returns Updated file.cio table.
+#'
+#' @keywords internal
+#'
+update_cio_pond <- function(file_cio) {
+  file_cio$connect[9] <- 'reservoir.con'
+  file_cio$reservoir[3] <- 'reservoir.res'
+  file_cio$reservoir[4] <- 'hydrology.res'
+  return(file_cio)
 }
 
 #' Update the rout_unit.con input table.

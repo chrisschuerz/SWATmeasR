@@ -10,6 +10,7 @@
 read_swat_inputs <- function(project_path) {
   input_list <- list(
     object.cnt        = read_tbl(paste0(project_path, '/object.cnt')),
+    file.cio          = read_cio(paste0(project_path, '/file.cio')),
     landuse.lum       = read_tbl(paste0(project_path, '/landuse.lum')),
     cntabe.lum        = read_tbl_n(paste0(project_path, '/cntable.lum'),
                                    id_col_sel = 1:5, id_num = 2:5),
@@ -357,6 +358,30 @@ read_dtl_names <- function(file_path) {
   return(dtl_names)
 }
 
+#' Read the SWAT+ model's file.cio.
+#'
+#' @param file_path Path of the SWAT+ file.cio
+#'
+#' @returns a named list with the lines of file.cio as character vectors.
+#'
+#' @importFrom dplyr  %>%
+#' @importFrom purrr map_chr
+#' @importFrom stringr str_split str_trim
+#'
+#' @keywords internal
+#'
+read_cio <- function(file_path) {
+  file_cio <- readLines(file_path)
+  # file_head <- file_cio[1]
+
+  file_cio <- file_cio[2:length(file_cio)] %>%
+    str_trim(.) %>%
+    str_split(., '[:space:]+')
+  entry_names <- map_chr(file_cio, ~ .x[1])
+  names(file_cio) <- entry_names
+
+  return(file_cio)
+}
 
 #' Add a running ID to duplicated names
 #'
