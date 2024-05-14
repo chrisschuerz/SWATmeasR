@@ -705,8 +705,8 @@ load_water_def <- function(file_path, swat_inputs, type) {
     if(any(def_tbl$hru_ps > def_tbl$hru_es, na.rm = T)) {
       stop("'hru_ps' cannot be larger than 'hru_es'.")
     }
-    if(any(def_tbl$dep_ps > def_tbl$dep_es, na.rm = T)) {
-      stop("'dep_ps' cannot be larger than 'dep_es'.")
+    if(any(def_tbl$dp_ps > def_tbl$dp_es, na.rm = T)) {
+      stop("'dp_ps' cannot be larger than 'dp_es'.")
     }
   }
 
