@@ -68,22 +68,20 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs, overwrite) {
     }
   # -------------------------------------------------------------------------
 
-  # Replace land objects with pond objects ----------------------------------
-  pond_loc_sel <- filter(nswrm_loc_sel, type == 'pond')
-  if(nrow(pond_loc_sel) > 0) {
-    pond_def_match <- map_lgl(nswrm_defs$pond$hru_id,
-                              ~ match_ids(pond_loc_sel$obj_id, .x))
-    pond_def_sel <- nswrm_defs$pond[pond_def_match,]
-    res_res_sel  <- select(pond_def_sel, rel:nut)
-    hyd_res_sel  <- select(pond_def_sel, area_ps:shp_co2)
+  # Add wetland water storage to land objects -------------------------------
+  wet_loc_sel <- filter(nswrm_loc_sel, type == 'wetland')
+  if(nrow(wet_loc_sel) > 0) {
+    wet_def_sel <- filter(nswrm_defs$wetland, hru_id %in% unlist(wet_loc_sel$obj_id))
+    wet_wet_sel  <- select(wet_def_sel, rel:nut)
+    hyd_wet_sel  <- select(wet_def_sel, hru_ps:hru_frac)
 
-    swat_inputs <- replace_by_ponds(swat_inputs,
-                                    hru_id      = pond_def_sel$hru_id,
-                                    to_cha_id   = pond_def_sel$cha_to_id,
-                                    from_cha_id = pond_def_sel$cha_from_id,
-                                    res_res_pnd = res_res_sel,
-                                    hyd_res_pnd = hyd_res_sel,
-                                    type = 'pond')
+    swat_inputs <- implement_wetlands(swat_inputs,
+                                      hru_id      = wet_def_sel$hru_id,
+                                      to_cha_id   = wet_def_sel$cha_to_id,
+                                      from_cha_id = wet_def_sel$cha_from_id,
+                                      lu_mgt_sel  = wet_def_sel$lu_mgt,
+                                      wet_wet_sel = wet_wet_sel,
+                                      hyd_wet_sel = hyd_wet_sel)
   }
   # -------------------------------------------------------------------------
 
@@ -107,19 +105,21 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs, overwrite) {
   # -------------------------------------------------------------------------
 
   # Replace land objects with pond objects ----------------------------------
-  wet_loc_sel <- filter(nswrm_loc_sel, type == 'wetland')
-  if(nrow(wet_loc_sel) > 0) {
-    wet_def_sel <- filter(nswrm_defs$wetland, hru_id %in% unlist(wet_loc_sel$obj_id))
-    wet_wet_sel  <- select(wet_def_sel, rel:nut)
-    hyd_wet_sel  <- select(wet_def_sel, hru_ps:hru_frac)
+  pond_loc_sel <- filter(nswrm_loc_sel, type == 'pond')
+  if(nrow(pond_loc_sel) > 0) {
+    pond_def_match <- map_lgl(nswrm_defs$pond$hru_id,
+                              ~ match_ids(pond_loc_sel$obj_id, .x))
+    pond_def_sel <- nswrm_defs$pond[pond_def_match,]
+    res_res_sel  <- select(pond_def_sel, rel:nut)
+    hyd_res_sel  <- select(pond_def_sel, area_ps:shp_co2)
 
-    swat_inputs <- implement_wetlands(swat_inputs,
-                                      hru_id      = wet_def_sel$hru_id,
-                                      to_cha_id   = wet_def_sel$cha_to_id,
-                                      from_cha_id = wet_def_sel$cha_from_id,
-                                      lu_mgt_sel  = wet_def_sel$lu_mgt,
-                                      wet_wet_sel = wet_wet_sel,
-                                      hyd_wet_sel = hyd_wet_sel)
+    swat_inputs <- replace_by_ponds(swat_inputs,
+                                    hru_id      = pond_def_sel$hru_id,
+                                    to_cha_id   = pond_def_sel$cha_to_id,
+                                    from_cha_id = pond_def_sel$cha_from_id,
+                                    res_res_pnd = res_res_sel,
+                                    hyd_res_pnd = hyd_res_sel,
+                                    type = 'pond')
   }
   # -------------------------------------------------------------------------
 
