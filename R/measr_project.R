@@ -175,12 +175,11 @@ measr_project <- R6Class(
     #'   before implementing a new set of measures. If `TRUE` the SWAT+ input
     #'   tables will be reset before implementing a new set of measures.
     #'
-    implement_nswrm = function(nswrm_id, reset = FALSE) {
+    implement_nswrm = function(nswrm_id) {
       self$.data$model_setup$modified_inputs <- implement_nswrm(
         nswrm_id,
         self$.data$nswrm_definition,
-        self$.data$model_setup$modified_inputs,
-        reset
+        self$.data$model_setup$modified_inputs
       )
       self$save()
     },

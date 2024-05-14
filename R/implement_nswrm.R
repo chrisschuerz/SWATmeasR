@@ -3,10 +3,6 @@
 #' @param file_path Path to the '.csv' location file.
 #' @param nswrm_defs List with already loaded NSWRM definition tables
 #' @param swat_inputs List with SWAT+ input files.
-#' @param reset Reset existing NSWRM implementations? Default is `FALSE`. If
-#'   measures were already implemented the SWAT+ input tables must be reset,
-#'   before implementing a new set of measures. If `TRUE` the SWAT+ input tables
-#'   will be reset before implementing a new set of measures.
 #'
 #' @returns The list of SWAT+ input tables with NSWRMs implemented in the
 #'   respective input tables.
@@ -15,7 +11,7 @@
 #'
 #' @keywords internal
 #'
-implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs, overwrite) {
+implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs) {
   # Check if NSWRM locations were already loaded into the measr_project.
   if(!'nswrm_locations' %in% names(nswrm_defs)) {
     stop("The NSWRM locations must be loaded before you can implement them ",
