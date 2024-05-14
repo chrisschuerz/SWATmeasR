@@ -4,7 +4,7 @@
 \alias{implement_nswrm}
 \title{Implement NSWRMs in the SWAT+ model input tables.}
 \usage{
-implement_nswrm(nswrm_id, nswrm_defs, swat_inputs, overwrite)
+implement_nswrm(nswrm_id, nswrm_defs, swat_inputs)
 }
 \arguments{
 \item{nswrm_defs}{List with already loaded NSWRM definition tables}
@@ -12,11 +12,6 @@ implement_nswrm(nswrm_id, nswrm_defs, swat_inputs, overwrite)
 \item{swat_inputs}{List with SWAT+ input files.}
 
 \item{file_path}{Path to the '.csv' location file.}
-
-\item{reset}{Reset existing NSWRM implementations? Default is \code{FALSE}. If
-measures were already implemented the SWAT+ input tables must be reset,
-before implementing a new set of measures. If \code{TRUE} the SWAT+ input tables
-will be reset before implementing a new set of measures.}
 }
 \value{
 The list of SWAT+ input tables with NSWRMs implemented in the

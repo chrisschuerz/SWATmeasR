@@ -183,7 +183,7 @@ a vector of HRU IDs. For 'channres' it is a vector of channel IDs
 \subsection{Method \code{implement_nswrm()}}{
 Implement NSWRMs in the SWAT+ model input tables.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{measr_project$implement_nswrm(nswrm_id, reset = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{measr_project$implement_nswrm(nswrm_id)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
