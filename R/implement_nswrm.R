@@ -35,6 +35,14 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs) {
     swat_inputs <- update_management(swat_inputs,
                                      hru_id  = hru_id,
                                      mgt_def = def_nswrm)
+
+    swat_inputs$implemented_nswrms <-
+      update_implemented_nswrms(swat_inputs$implemented_nswrms,
+                                nswrm_i = nswrm_i,
+                                obj_typ_i = 'hru',
+                                obj_id_i = hru_id,
+                                obj_typ_upd_i = NA_character_,
+                                obj_id_upd_i = NA_integer_)
   }
   # -------------------------------------------------------------------------
 
@@ -61,6 +69,14 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs) {
     if(!def_nswrm$lum_dtl %in% c('::keep::', 'null')) {
       swat_inputs <- add_dtl_op(swat_inputs, hru_id, def_nswrm$lum_dtl)
     }
+
+    swat_inputs$implemented_nswrms <-
+      update_implemented_nswrms(swat_inputs$implemented_nswrms,
+                                nswrm_i = nswrm_i,
+                                obj_typ_i = 'hru',
+                                obj_id_i = hru_id,
+                                obj_typ_upd_i = NA_character_,
+                                obj_id_upd_i = NA_integer_)
     }
   # -------------------------------------------------------------------------
 
@@ -78,6 +94,14 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs) {
                                       lu_mgt_sel  = wet_def_sel$lu_mgt,
                                       wet_wet_sel = wet_wet_sel,
                                       hyd_wet_sel = hyd_wet_sel)
+
+    swat_inputs$implemented_nswrms <-
+      update_implemented_nswrms(swat_inputs$implemented_nswrms,
+                                nswrm_i = 'wetland',
+                                obj_typ_i = 'hru',
+                                obj_id_i = wet_def_sel$hru_id,
+                                obj_typ_upd_i = NA_character_,
+                                obj_id_upd_i = NA_integer_)
   }
   # -------------------------------------------------------------------------
 
@@ -97,6 +121,16 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs) {
                                     res_res_pnd = res_res_sel,
                                     hyd_res_pnd = hyd_res_sel,
                                     type = 'constr_wetland')
+
+    ids <- link_hru_res_ids(pond_def_sel$hru_id, swat_inputs$reservoir.res, 'cwl')
+
+    swat_inputs$implemented_nswrms <-
+      update_implemented_nswrms(swat_inputs$implemented_nswrms,
+                                nswrm_i = 'constr_wetland',
+                                obj_typ_i = 'hru',
+                                obj_id_i = ids$hru_ids,
+                                obj_typ_upd_i = 'res',
+                                obj_id_upd_i = ids$res_ids)
   }
   # -------------------------------------------------------------------------
 
@@ -116,8 +150,49 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs) {
                                     res_res_pnd = res_res_sel,
                                     hyd_res_pnd = hyd_res_sel,
                                     type = 'pond')
+
+    ids <- link_hru_res_ids(pond_def_sel$hru_id, swat_inputs$reservoir.res, 'pnd')
+
+    swat_inputs$implemented_nswrms <-
+      update_implemented_nswrms(swat_inputs$implemented_nswrms,
+                                nswrm_i = 'pond',
+                                obj_typ_i = 'hru',
+                                obj_id_i = ids$hru_ids,
+                                obj_typ_upd_i = 'res',
+                                obj_id_upd_i = ids$res_ids)
   }
   # -------------------------------------------------------------------------
 
   return(swat_inputs)
+}
+
+update_implemented_nswrms <- function(tbl, nswrm_i, obj_typ_i, obj_id_i,
+                                      obj_typ_upd_i, obj_id_upd_i) {
+  if(is.null(tbl)) {
+    tbl <- tibble(nswrm = character(),
+                  obj_typ = character(),
+                  obj_id = integer(),
+                  obj_typ_new = character(),
+                  obj_id_new = integer())
+  }
+
+  tbl <- filter(tbl, !(obj_id %in% obj_id_i & obj_typ == obj_typ_i))
+
+  tbl <- add_row(tbl,
+                 nswrm = nswrm_i,
+                 obj_id = obj_id_i,
+                 obj_typ = obj_typ_i,
+                 obj_id_new = obj_id_upd_i,
+                 obj_typ_new = obj_typ_upd_i
+                 )
+
+  return(tbl)
+}
+
+link_hru_res_ids <- function(hru_ids, res_res, type) {
+  res_lbls <- map_chr(hru_ids, ~ paste0(type, .x[1]))
+  res_ids <- res_res$id[match(res_lbls, res_res$name)]
+  res_ids <- map2(res_ids, hru_ids, ~ rep(.x, length(.y)))
+  return(list(hru_ids = unlist(hru_ids),
+              res_ids = unlist(res_ids)))
 }
