@@ -23,15 +23,8 @@
 #'   must be the same length as `hru_id`. Each channel ID corresponds to the
 #'   respective `hru_id`.
 #'
-#' @param from_cha_id (Optional) channel IDs which send water to the wetlands.
-#'
-#'   The input is default `NA`. Then the channel routing remains unchanged.
-#'   Multiple channels can be rerouted into a wetland. If `hru_id` is a single
-#'   value `from_cha_id` can be a single numeric value to reroute one channel,
-#'   or a vector to reroute multiple channels. If `hru_id` is a vector,
-#'   `from_cha_id` must be a list with the same length, as `hru_id`. If for a
-#'   respective `hru_id` no channels should be rerouted that list element is
-#'   `NA`, otherwise the list element can be a value or a vector.
+#' @param lu_mgt_sel Selected land use which should be employed for the wetland.
+#'   (User defined in the wetlands definition table or NA if not set)
 #'
 #' @param wet_wet_sel Table with rel, sed and nut pointers for the added
 #'   wetlands. The pointers will be written into wetlands.wet
@@ -45,7 +38,7 @@
 #'
 #' @keywords internal
 #'
-implement_wetlands <- function(swat_inputs, hru_id, to_cha_id, from_cha_id,
+implement_wetlands <- function(swat_inputs, hru_id, to_cha_id,
                                lu_mgt_sel, wet_wet_sel, hyd_wet_sel) {
   # Check if an HRU is already a wetland
   is_wetl <- check_is_wetland(swat_inputs, hru_id)
@@ -187,7 +180,6 @@ update_wet_wet <- function(wet_wet, wet_wet_i, hru_id_chr) {
 #' @param hyd_wet hydrology.wet input table.
 #' @param hyd_wet_i hydrology.wet parameters table for added surface water
 #'   storage.
-#' @param hru_id HRU IDs to which surface water storage (wetland) will be added.
 #' @param hru_id_chr HRU IDs to which surface water storage (wetland) will be
 #'   added. The input is character with leading zeros.
 #'

@@ -153,8 +153,25 @@ load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
 #'   generates the file `'mgt_scenarios.rds'` which is the required input
 #'   to define management related NSWRMs.
 #' - `'pond'`: A pond definition table includes all definitions for pond
-#'   locations. The `pond` table must provide the columns `name`,
+#'   locations. The `pond` table must provide the columns `hru_id`,
 #'   `to_cha_id`, and `from_cha_id`.
+#'   Optionally, the hydrology.res parameters for a pond and the pointers
+#'   for `'rel'` (release decision table), `'sed'` for sediment.res
+#'   parametrisations, and `'nut'` for nutrients.res parametrisations can
+#'   be defined.
+#' - `'constr_wetland'`: A constructed wetland is implemented the same way
+#'   as a pond. Thus the same definitions like for the pond apply for a
+#'   constructed wetland. As a constructed wetland is considered to be part
+#'   of the channel/reservoir network, the definitions of `to_cha_id` and
+#'   `from_cha_id` are mandatory.
+#' - `'wetland'`: A wetland definition table includes all definitions for
+#'   wetland locations. The `wetland` table must provide the columns `hru_id`.
+#'   Optionally, water from a wetland can be directly routed into a channel
+#'   and overwrite the original routing of the wetland HRU. In that case
+#'   `to_cha_id` must be defined. The hydrology.wet parameters for a
+#'   wetland and the pointers for `'rel'` (release decision table),
+#'   `'sed'` for sediment.res parametrisations, and  `'nut'` for
+#'   nutrients.res parametrisations can be defined.
 #'
 #' @param file_path Path to the '.csv' or '.rds' definition file.
 #' @param type Type of the NSWRM which is defined by this input file. The

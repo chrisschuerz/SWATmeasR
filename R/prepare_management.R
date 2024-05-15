@@ -6,12 +6,23 @@
 #'   (i.e. txtinout folder).
 #' @param status_quo Name of the SWATfarmR project which provides the status
 #'   quo.
+#' @param scenarios Optional character string vector to select scenarios to be
+#'   used in the management preparation if not all farmR projects in the SWAT+
+#'   model folder should be used (default `NULL` all farmR projects are used).
 #' @param synonyms Optional table to define synonymous op_data1 definitions for
 #'   op_types in status quo and a scenario.
 #' @param write_path Optional path to write the prepared management inputs.
 #' @param write_csv_mgts Should the management tables with corrected dates be
 #'   written as csv files (default is `FALSE`). This can be useful to compare
 #'   and check the corrected dates of the scenario management tables.
+#' @param start_year Year to start management schedules if not entire scheduled
+#'   periods from the farmR projects should be used. `start_year` must be
+#'   defined together with `end_year` (default `NULL` all scheduled years are
+#'   used).
+#' @param end_year Year to end management schedules if not entire scheduled
+#'   periods from the farmR projects should be used. `end_year` must be
+#'   defined together with `start_year` (default `NULL` all scheduled years are
+#'   used).
 #'
 #' @returns Writes an '.rds' file into the `write_path` which must be used as
 #'   the input file to define 'management' related NSWRMs in
@@ -502,7 +513,6 @@ write_farmr_ops <- function(farmr_project, start_year, end_year) {
 #' @param end_year Numeric. Defines the last year for which to write operations.
 #' @param year_range numeric vector with start and end year of the scheduled operations.
 #' @param version String that indicates the SWAT version.
-#'
 #'
 #' @keywords internal
 #'
