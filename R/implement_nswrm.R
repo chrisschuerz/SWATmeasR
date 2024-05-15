@@ -166,6 +166,31 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs) {
   return(swat_inputs)
 }
 
+#' Update the table implemented_nswrms which tracks the objects (currently HRUs)
+#' in which measures were implemented.
+#'
+#' @param tbl Existing implemented_nswrms table (if not existing this value is NULL)
+#' @param nswrm_i String type of the implemented measure.
+#' @param obj_typ_i String giving the type of spatial objects in which a measure
+#'   is implemented (e.g. 'hru').
+#' @param obj_id_i Vector of integer ID values of the objects in which the
+#'   measure is implemented.
+#' @param obj_typ_upd_i  String giving the type of spatial object which replaces
+#'   the existing spatial objects with the measure implementation (e.g. 'res' in
+#'   case of a pond).
+#' @param obj_id_upd_i Vector of integer ID values of the new objects which
+#'   replaced the initial spatial objects (e.g. res IDs of new reservoirs).
+#'
+#' @returns A tibble with the columns `nswrm` for the NSWRM types, `obj_typ` with
+#'   the type of spatial objects, `obj_id` with the IDs of the spatial objects
+#'   in which a measure was implemented, `obj_typ_new` with the type of the new
+#'   spatial objects, and `obj_id_new` with the IDs of the new objects.
+#'
+#' @importFrom dplyr filter
+#' @importFrom tibble add_row tibble
+#'
+#' @keywords internal
+#'
 update_implemented_nswrms <- function(tbl, nswrm_i, obj_typ_i, obj_id_i,
                                       obj_typ_upd_i, obj_id_upd_i) {
   if(is.null(tbl)) {
@@ -189,6 +214,20 @@ update_implemented_nswrms <- function(tbl, nswrm_i, obj_typ_i, obj_id_i,
   return(tbl)
 }
 
+#' Link the HRU IDs which were replaced by a pond or a constructed wetland with
+#' the IDs of the new objects in the reservoir.res input file.
+#'
+#' @param hru_ids List of vectors of HRU IDs
+#' @param res_res Updated reservoir.res SWAT+ input table
+#' @param type Type of measures (either `'pnd'` or `'cwl'`)
+#'
+#' @returns A list with the vectors of `hru_ids` and corresponding `res_ids`.
+#'   The vectors have the same length,
+#'
+#' @importFrom purrr map_chr map2
+#'
+#' @keywords internal
+#'
 link_hru_res_ids <- function(hru_ids, res_res, type) {
   res_lbls <- map_chr(hru_ids, ~ paste0(type, .x[1]))
   res_ids <- res_res$id[match(res_lbls, res_res$name)]
