@@ -46,8 +46,25 @@ must be prepared with the function
 generates the file \code{'mgt_scenarios.rds'} which is the required input
 to define management related NSWRMs.
 \item \code{'pond'}: A pond definition table includes all definitions for pond
-locations. The \code{pond} table must provide the columns \code{name},
+locations. The \code{pond} table must provide the columns \code{hru_id},
 \code{to_cha_id}, and \code{from_cha_id}.
+Optionally, the hydrology.res parameters for a pond and the pointers
+for \code{'rel'} (release decision table), \code{'sed'} for sediment.res
+parametrisations, and \code{'nut'} for nutrients.res parametrisations can
+be defined.
+\item \code{'constr_wetland'}: A constructed wetland is implemented the same way
+as a pond. Thus the same definitions like for the pond apply for a
+constructed wetland. As a constructed wetland is considered to be part
+of the channel/reservoir network, the definitions of \code{to_cha_id} and
+\code{from_cha_id} are mandatory.
+\item \code{'wetland'}: A wetland definition table includes all definitions for
+wetland locations. The \code{wetland} table must provide the columns \code{hru_id}.
+Optionally, water from a wetland can be directly routed into a channel
+and overwrite the original routing of the wetland HRU. In that case
+\code{to_cha_id} must be defined. The hydrology.wet parameters for a
+wetland and the pointers for \code{'rel'} (release decision table),
+\code{'sed'} for sediment.res parametrisations, and  \code{'nut'} for
+nutrients.res parametrisations can be defined.
 }
 }
 \keyword{internal}

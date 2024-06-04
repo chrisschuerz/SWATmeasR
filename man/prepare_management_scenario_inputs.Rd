@@ -24,8 +24,22 @@ prepare_management_scenario_inputs(
 \item{status_quo}{Name of the SWATfarmR project which provides the status
 quo.}
 
+\item{scenarios}{Optional character string vector to select scenarios to be
+used in the management preparation if not all farmR projects in the SWAT+
+model folder should be used (default \code{NULL} all farmR projects are used).}
+
 \item{synonyms}{Optional table to define synonymous op_data1 definitions for
 op_types in status quo and a scenario.}
+
+\item{start_year}{Year to start management schedules if not entire scheduled
+periods from the farmR projects should be used. \code{start_year} must be
+defined together with \code{end_year} (default \code{NULL} all scheduled years are
+used).}
+
+\item{end_year}{Year to end management schedules if not entire scheduled
+periods from the farmR projects should be used. \code{end_year} must be
+defined together with \code{start_year} (default \code{NULL} all scheduled years are
+used).}
 
 \item{write_path}{Optional path to write the prepared management inputs.}
 

@@ -9,7 +9,6 @@ implement_wetlands(
   swat_inputs,
   hru_id,
   to_cha_id,
-  from_cha_id,
   lu_mgt_sel,
   wet_wet_sel,
   hyd_wet_sel
@@ -31,15 +30,8 @@ The input can be a single numeric value or a vector of values. \code{to_cha_id}
 must be the same length as \code{hru_id}. Each channel ID corresponds to the
 respective \code{hru_id}.}
 
-\item{from_cha_id}{(Optional) channel IDs which send water to the wetlands.
-
-The input is default \code{NA}. Then the channel routing remains unchanged.
-Multiple channels can be rerouted into a wetland. If \code{hru_id} is a single
-value \code{from_cha_id} can be a single numeric value to reroute one channel,
-or a vector to reroute multiple channels. If \code{hru_id} is a vector,
-\code{from_cha_id} must be a list with the same length, as \code{hru_id}. If for a
-respective \code{hru_id} no channels should be rerouted that list element is
-\code{NA}, otherwise the list element can be a value or a vector.}
+\item{lu_mgt_sel}{Selected land use which should be employed for the wetland.
+(User defined in the wetlands definition table or NA if not set)}
 
 \item{wet_wet_sel}{Table with rel, sed and nut pointers for the added
 wetlands. The pointers will be written into wetlands.wet}

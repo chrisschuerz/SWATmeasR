@@ -90,7 +90,6 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs) {
     swat_inputs <- implement_wetlands(swat_inputs,
                                       hru_id      = wet_def_sel$hru_id,
                                       to_cha_id   = wet_def_sel$cha_to_id,
-                                      from_cha_id = wet_def_sel$cha_from_id,
                                       lu_mgt_sel  = wet_def_sel$lu_mgt,
                                       wet_wet_sel = wet_wet_sel,
                                       hyd_wet_sel = hyd_wet_sel)

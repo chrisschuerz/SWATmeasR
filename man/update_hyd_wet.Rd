@@ -14,8 +14,6 @@ storage.}
 
 \item{hru_id_chr}{HRU IDs to which surface water storage (wetland) will be
 added. The input is character with leading zeros.}
-
-\item{hru_id}{HRU IDs to which surface water storage (wetland) will be added.}
 }
 \value{
 Updated hydrology.wet input table.
