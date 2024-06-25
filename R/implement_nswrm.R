@@ -121,7 +121,7 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs) {
                                     hyd_res_pnd = hyd_res_sel,
                                     type = 'constr_wetland')
 
-    ids <- link_hru_res_ids(pond_def_sel$hru_id, swat_inputs$reservoir.res, 'cwl')
+    ids <- link_hru_res_ids(cwtl_def_sel$hru_id, swat_inputs$reservoir.res, 'cwl')
 
     swat_inputs$implemented_nswrms <-
       update_implemented_nswrms(swat_inputs$implemented_nswrms,
