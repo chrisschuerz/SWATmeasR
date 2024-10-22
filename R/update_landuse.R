@@ -79,7 +79,8 @@ update_landuse <- function(swat_inputs, hru_id, nswrm,
     filter(., id %in% hru_id) %>%
     select(id, lu_mgt) %>%
     set_names(c('id', 'name')) %>%
-    left_join(., swat_inputs$landuse.lum, by = 'name')
+    left_join(., swat_inputs$landuse.lum, by = 'name') %>%
+    distinct(.)
 
   if(lum_plnt != '::keep::') {
     hru_lum$plnt_com <- lum_plnt
