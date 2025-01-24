@@ -3,7 +3,10 @@
 #' `measr_project$load_nswrm_definition()`.
 #'
 #' @param project_path Path to the SWAT project folder on the hard drive
-#'   (i.e. txtinout folder).
+#'   (i.e. txtinout folder), or a folder which contains all farmR projects, or
+#'   a folder with sub-folders for the status quo and the scenarios, where each
+#'   folder contains the files hru-data.hru, landuse.lum, management.sch, and
+#'   plant.ini for each case.
 #' @param status_quo Name of the SWATfarmR project which provides the status
 #'   quo.
 #' @param scenarios Optional character string vector to select scenarios to be
@@ -34,12 +37,13 @@
 #' @importFrom dplyr bind_rows distinct left_join select %>%
 #' @importFrom purrr map map_chr map_lgl map2
 #' @importFrom readr read_csv write_csv
-#' @importFrom stringr str_remove
+#' @importFrom stringr str_detect str_remove
 #'
 #' @export
 #'
-prepare_management_scenario_inputs <- function(project_path, status_quo,
-                                               scenarios = NULL, synonyms = NULL,
+prepare_management_scenario_inputs <- function(project_path,
+                                               status_quo, scenarios = NULL,
+                                               synonyms = NULL,
                                                start_year = NULL, end_year = NULL,
                                                write_path = project_path,
                                                write_csv_mgts = FALSE) {
@@ -55,17 +59,30 @@ prepare_management_scenario_inputs <- function(project_path, status_quo,
     }
   }
 
-  # Load farmR projects ----------------------------------------------------
+  proj_files <- list.files(project_path)
+
+  if(any(str_detect(proj_files, '.farm$')) &
+     any(str_detect(proj_files, '.mgts$'))) {
+    file_type <- 'farmr'
+     } else {
+    file_type <- 'txt'
+  }
+
+  # Load management inputs ------------------------------------------------
   #
   # Exclude the status quo from the scenario names.
   # If scenarios is not defined the routine uses all farmR projects which
   # were found in project_path.
   if(is.null(scenarios)) {
-    farmr_names <- list.files(project_path, pattern = '.farm$') %>%
-      str_remove(., '.farm$')
-    farmr_names <- farmr_names[farmr_names != status_quo]
+    if(file_type == 'farmr') {
+      scen_names <- list.files(project_path, pattern = '.farm$') %>%
+        str_remove(., '.farm$')
+    } else if (file_type == 'txt') {
+      scen_names <- proj_files
+    }
+    scen_names <- scen_names[scen_names != status_quo]
   } else {
-    farmr_names <- str_remove(scenarios, '.farm$')
+    scen_names <- str_remove(scenarios, '.farm$')
   }
 
   # Load the scenario farmR projects into a list
