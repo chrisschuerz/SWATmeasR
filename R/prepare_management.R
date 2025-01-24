@@ -85,20 +85,22 @@ prepare_management_scenario_inputs <- function(project_path,
     scen_names <- str_remove(scenarios, '.farm$')
   }
 
-  # Load the scenario farmR projects into a list
-  farm_scen <- map(farmr_names, ~ read_farmr(paste(project_path,
-                                                   paste0(.x, '.farm'),
-                                                   sep = '/'))) %>%
-    set_names(farmr_names)
+  if(file_type == 'farmr') {
+    # Load the scenario farmR projects into a list
+    farm_scen <- map(scen_names, ~ read_farmr(paste(project_path,
+                                                     paste0(.x, '.farm'),
+                                                     sep = '/'))) %>%
+      set_names(scen_names)
 
-  # Load the farmR project for the status quo
-  farm_squo <- read_farmr(paste(project_path,
-                                paste0(status_quo, '.farm'),
-                                sep = '/'))
+    # Load the farmR project for the status quo
+    farm_squo <- read_farmr(paste(project_path,
+                                  paste0(status_quo, '.farm'),
+                                  sep = '/'))
 
-  # Compare properties such as the start/end years or number of HRUs
-  # to have minor checks if the projects are for the same SWAT+ project.
-  compare_scen_quo_properties(farm_scen, farm_squo)
+    # Compare properties such as the start/end years or number of HRUs
+    # to have minor checks if the projects are for the same SWAT+ project.
+    compare_scen_quo_properties(farm_scen, farm_squo)
+  }
 
   # For all scenarios the following workflow is executed:
   # - load each found farmR project
@@ -114,33 +116,40 @@ prepare_management_scenario_inputs <- function(project_path,
   #
   scen_files <- list()
 
-  for (scen_i in farmr_names) {
+  for (scen_i in scen_names) {
     cat('Preparing and loading input files for scenario', scen_i, ':\n')
 
-    if(xor(is.null(start_year), is.null(end_year))) {
-      stop("Either both 'start_year' and 'end_year' are defined or both are NULL.")
+    if(file_type == 'farmr') {
+      if(xor(is.null(start_year), is.null(end_year))) {
+        stop("Either both 'start_year' and 'end_year' are defined or both are NULL.")
+      }
+
+      if(is.null(start_year)) {
+        start_year <- farm_scen[[scen_i]]$.data$scheduled_operations$scheduled_years$start_year
+        end_year <- farm_scen[[scen_i]]$.data$scheduled_operations$scheduled_years$end_year
+      }
+
+      write_farmr_ops(farm_scen[[scen_i]],
+      start_year = start_year,
+      end_year = end_year)
+
+      mgt_file_path <- project_path
+    } else if (file_type == 'txt') {
+
+      mgt_file_path <- paste0(project_path, '/', scen_i)
     }
 
-    if(is.null(start_year)) {
-      start_year <- farm_scen[[scen_i]]$.data$scheduled_operations$scheduled_years$start_year
-      end_year <- farm_scen[[scen_i]]$.data$scheduled_operations$scheduled_years$end_year
-    }
+    update_landuse_labels(mgt_file_path)
 
-    write_farmr_ops(farm_scen[[scen_i]],
-    start_year = start_year,
-    end_year = end_year)
+    hru_data_scen <- read_tbl(paste0(mgt_file_path, '/hru-data.hru'))
+    luse_lum_scen <- read_tbl(paste0(mgt_file_path, '/landuse.lum'))
 
-    update_landuse_labels(project_path)
-
-    hru_data_scen <- read_tbl(paste0(project_path, '/hru-data.hru'))
-    luse_lum_scen <- read_tbl(paste0(project_path, '/landuse.lum'))
-
-    mgt_sch_scen  <- read_tbl2(file_path = paste0(project_path, '/management.sch'),
+    mgt_sch_scen  <- read_tbl2(file_path = paste0(mgt_file_path, '/management.sch'),
                                def_names = c('name', 'numb_ops', 'numb_auto'),
                                par_names = c('op_typ', 'mon', 'day', 'hu_sch',
                                              paste0('op_data', 1:3)),
                                id_num    =  c(2:3, 5:7, 10))
-    plt_ini_scen <- read_tbl2(file_path = paste0(project_path, '/plant.ini'),
+    plt_ini_scen <- read_tbl2(file_path = paste0(mgt_file_path, '/plant.ini'),
                               def_names = c('pcom_name', 'plt_cnt', 'rot_yr_ini'),
                               par_names = c('plt_name', 'lc_status', 'lai_init',
                                             'bm_init', 'phu_init', 'plnt_pop',
@@ -166,17 +175,17 @@ prepare_management_scenario_inputs <- function(project_path,
 
   write_farmr_ops(farm_squo, start_year = start_year, end_year = end_year)
 
-  update_landuse_labels(project_path)
+  update_landuse_labels(mgt_file_path)
 
-  hru_data_squo <- read_tbl(paste0(project_path, '/hru-data.hru'))
-  luse_lum_squo <- read_tbl(paste0(project_path, '/landuse.lum'))
+  hru_data_squo <- read_tbl(paste0(mgt_file_path, '/hru-data.hru'))
+  luse_lum_squo <- read_tbl(paste0(mgt_file_path, '/landuse.lum'))
 
-  mgt_sch_squo  <- read_tbl2(file_path = paste0(project_path, '/management.sch'),
+  mgt_sch_squo  <- read_tbl2(file_path = paste0(mgt_file_path, '/management.sch'),
                              def_names = c('name', 'numb_ops', 'numb_auto'),
                              par_names = c('op_typ', 'mon', 'day', 'hu_sch',
                                            paste0('op_data', 1:3)),
                              id_num    =  c(2:3, 5:7, 10))
-  plt_ini_squo <- read_tbl2(file_path = paste0(project_path, '/plant.ini'),
+  plt_ini_squo <- read_tbl2(file_path = paste0(mgt_file_path, '/plant.ini'),
                             def_names = c('pcom_name', 'plt_cnt', 'rot_yr_ini'),
                             par_names = c('plt_name', 'lc_status', 'lai_init',
                                           'bm_init', 'phu_init', 'plnt_pop',
