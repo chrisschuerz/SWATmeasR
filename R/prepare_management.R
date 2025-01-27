@@ -35,7 +35,7 @@
 #'   as '.csv' files into the folder '<yyyymmdd_hhmm>_management_scenarios'.
 #'
 #' @importFrom dplyr bind_rows distinct left_join select %>%
-#' @importFrom purrr map map_chr map_lgl map2
+#' @importFrom purrr list_c map map_chr map_lgl map2 map2_chr
 #' @importFrom readr read_csv write_csv
 #' @importFrom stringr str_detect str_remove
 #'
@@ -61,12 +61,11 @@ prepare_management_scenario_inputs <- function(project_path,
 
   proj_files <- list.files(project_path)
 
-  if(any(str_detect(proj_files, '.farm$')) &
-     any(str_detect(proj_files, '.mgts$'))) {
+  if(paste0(status_quo, '.farm') %in% proj_files) {
     file_type <- 'farmr'
-     } else {
+    } else {
     file_type <- 'txt'
-  }
+    }
 
   # Load management inputs ------------------------------------------------
   #
@@ -83,6 +82,32 @@ prepare_management_scenario_inputs <- function(project_path,
     scen_names <- scen_names[scen_names != status_quo]
   } else {
     scen_names <- str_remove(scenarios, '.farm$')
+  }
+
+  if(file_type == 'farmr') {
+    mgt_files <- paste0(rep(c(status_quo, scen_names), each = 2),
+                        c('.farm', '.mgts'))
+    mgt_missing <- !mgt_files %in% proj_files
+    if(any(mgt_missing)) {
+      stop("'SWATfarmR' input files were expected for the management scenario preparation.\n",
+           "The following required files were not found:\n",
+           paste(mgt_files[mgt_missing], collapse = ', '))
+    }
+     } else {
+    mgt_files <- map(c(status_quo, scen_names), ~list.files(paste0(project_path, '/', .x)))
+    mgt_required <- c("hru-data.hru", "landuse.lum", "management.sch", "plant.ini")
+    mgt_missing <- map(mgt_files, ~ !mgt_required %in% .x)
+    if(any(list_c(mgt_missing))) {
+      txt_miss <- map2_chr(mgt_files, mgt_missing, ~ paste(.x[.y], collapse = ','))
+      txt_miss[nchar(txt_miss) > 0] <- paste0(c(status_quo, scen_names)[nchar(txt_miss) > 0], ': ',
+                                              txt_miss[nchar(txt_miss) > 0],
+                                              '\n')
+      txt_miss <- c(txt_miss, '\n')
+      stop("SWAT+ management input files were expected for the management scenario preparation.\n",
+           "The files 'hru-data.hru', 'landuse.lum', 'management.sch', and 'plant.ini' are required for the status quo and all scenarios.\n",
+           "The following files were not found:\n\n",
+           txt_miss)
+    }
   }
 
   if(file_type == 'farmr') {
