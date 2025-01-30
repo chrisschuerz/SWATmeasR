@@ -297,10 +297,19 @@ load_luse_def <- function(file_path, swat_inputs) {
 
   luse_def <- map_df(luse_def, ~replace_na(.x, '::keep::'))
 
-  # Check optional columns 'tile' and 'lum_dtl'
+  # Check optional columns 'tile', 'vfs', 'grww', 'bmp' and 'lum_dtl'
 
   if (!'tile' %in% names(luse_def)) {
     luse_def$tile <- '::keep::'
+  }
+  if (!'vfs' %in% names(luse_def)) {
+    luse_def$vfs <- '::keep::'
+  }
+  if (!'grww' %in% names(luse_def)) {
+    luse_def$grww <- '::keep::'
+  }
+  if (!'bmp' %in% names(luse_def)) {
+    luse_def$bmp <- '::keep::'
   }
 
   if (!'lum_dtl' %in% names(luse_def)) {
@@ -328,11 +337,19 @@ load_luse_def <- function(file_path, swat_inputs) {
     c(swat_inputs$ovn_table.lum$name, 'null', '::keep::')
   lum_tile_miss  <- !luse_def$tile %in%
     c(swat_inputs$tiledrain.str$name, 'null', '::keep::')
+  lum_vfs_miss  <- !luse_def$vfs %in%
+    c(swat_inputs$filterstrip.str$name, 'null', '::keep::')
+  lum_grww_miss  <- !luse_def$grww %in%
+    c(swat_inputs$grassedww.str$name, 'null', '::keep::')
+  lum_bmp_miss  <- !luse_def$bmp %in%
+    c(swat_inputs$bmpuser.str$name, 'null', '::keep::')
   lum_dtl_miss  <- !dtl_names %in%
     c(swat_inputs$lum.dtl_names, 'null', '::keep::')
 
   if (any(c(lum_plnt_miss, lum_mgt_miss, lum_cn2_miss,
-            lum_cpr_miss, lum_ovn_miss, lum_tile_miss, lum_dtl_miss))) {
+            lum_cpr_miss, lum_ovn_miss, lum_tile_miss,
+            lum_vfs_miss, lum_grww_miss, lum_bmp_miss,
+            lum_dtl_miss))) {
     if(any(lum_plnt_miss)) {
       plnt_msg <- paste0("'plnt_com' not defined in 'plant.ini': ",
                          paste(unique(luse_def$plnt_com[lum_plnt_miss]),
@@ -375,6 +392,27 @@ load_luse_def <- function(file_path, swat_inputs) {
     } else {
       tile_msg  <- ''
     }
+    if(any(lum_vfs_miss)) {
+      vfs_msg  <- paste0("'vfs' not defined in 'filterstrip.str': ",
+                         paste(unique(luse_def$vfs[lum_vfs_miss]),
+                               collapse = ', '), '\n')
+    } else {
+      vfs_msg  <- ''
+    }
+    if(any(lum_grww_miss)) {
+      grww_msg  <- paste0("'grww' not defined in 'grassedww.str': ",
+                         paste(unique(luse_def$grww[lum_grww_miss]),
+                               collapse = ', '), '\n')
+    } else {
+      grww_msg  <- ''
+    }
+    if(any(lum_bmp_miss)) {
+      bmp_msg  <- paste0("'bmp' not defined in 'bmpuser.str': ",
+                         paste(unique(luse_def$bmp[lum_bmp_miss]),
+                               collapse = ', '), '\n')
+    } else {
+      bmp_msg  <- ''
+    }
     if(any(lum_dtl_miss)) {
       dtl_msg  <- paste0("Operation schedules not defined in 'lum.dtl': ",
                          paste(unique(dtl_names[lum_dtl_miss]),
@@ -385,7 +423,8 @@ load_luse_def <- function(file_path, swat_inputs) {
 
     stop('The following options are not defined in the respective SWAT+ input ',
          'files: \n\n',
-         plnt_msg, sch_msg, cn2_msg, cpr_msg, ovn_msg, tile_msg, dtl_msg,
+         plnt_msg, sch_msg, cn2_msg, cpr_msg, ovn_msg, tile_msg,
+         vfs_msg, grww_msg, bmp_msg, dtl_msg,
          '\n\nPlease do the following to solve this issue:\n',
          'i)   Add the missing entries in the SWAT+ input files\n',
          "ii)  Reload all SWAT+ input files with ",

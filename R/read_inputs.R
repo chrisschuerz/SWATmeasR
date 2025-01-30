@@ -71,7 +71,10 @@ read_swat_inputs <- function(project_path) {
     nutrients.res     = read_tbl(paste0(project_path, '/nutrients.res')),
     res_rel.dtl_names = read_dtl_names(paste0(project_path, '/res_rel.dtl')),
     lum.dtl_names     = read_dtl_names(paste0(project_path, '/lum.dtl')),
-    tiledrain.str     = read_tbl(paste0(project_path, '/tiledrain.str'))
+    tiledrain.str     = read_tbl(paste0(project_path, '/tiledrain.str')),
+    bmpuser.str     = read_tbl(paste0(project_path, '/bmpuser.str')),
+    filterstrip.str     = read_tbl(paste0(project_path, '/filterstrip.str')),
+    grassedww.str     = read_tbl(paste0(project_path, '/grassedww.str'))
   )
 
   file_names <- names(input_list)
