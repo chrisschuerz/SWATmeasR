@@ -1,12 +1,11 @@
-#' Prepare the management input data from SWATfarmR project as inputs
-#' for the definition of management related NSWRMs with
+#' Prepare the management input data from SWATfarmR project as inputs for the
+#' definition of management related NSWRMs with
 #' `measr_project$load_nswrm_definition()`.
 #'
-#' @param project_path Path to the SWAT project folder on the hard drive
-#'   (i.e. txtinout folder), or a folder which contains all farmR projects, or
-#'   a folder with sub-folders for the status quo and the scenarios, where each
-#'   folder contains the files hru-data.hru, landuse.lum, management.sch, and
-#'   plant.ini for each case.
+#' @param project_path Path to the SWAT project folder on the hard drive (i.e.
+#'   txtinout folder), or a folder with sub-folders for the status quo and the
+#'   scenarios, where each folder contains the files hru-data.hru, landuse.lum,
+#'   management.sch, and plant.ini for each case.
 #' @param status_quo Name of the SWATfarmR project which provides the status
 #'   quo.
 #' @param scenarios Optional character string vector to select scenarios to be
@@ -21,18 +20,18 @@
 #' @param start_year Year to start management schedules if not entire scheduled
 #'   periods from the farmR projects should be used. `start_year` must be
 #'   defined together with `end_year` (default `NULL` all scheduled years are
-#'   used).
+#'   used). Parameter only used in case of SWATfarmR projects.
 #' @param end_year Year to end management schedules if not entire scheduled
-#'   periods from the farmR projects should be used. `end_year` must be
-#'   defined together with `start_year` (default `NULL` all scheduled years are
-#'   used).
+#'   periods from the farmR projects should be used. `end_year` must be defined
+#'   together with `start_year` (default `NULL` all scheduled years are used).
+#'   Parameter only used in case of SWATfarmR projects.
 #'
 #' @returns Writes an '.rds' file into the `write_path` which must be used as
 #'   the input file to define 'management' related NSWRMs in
 #'   `measr_project$load_nswrm_definition()`. The file name has the following
-#'   structure '<yyyymmdd_hhmm>_management_scenarios.rds'. Optionally also
-#'   the management schedules for the scenarios and the status quo are written
-#'   as '.csv' files into the folder '<yyyymmdd_hhmm>_management_scenarios'.
+#'   structure '<yyyymmdd_hhmm>_management_scenarios.rds'. Optionally also the
+#'   management schedules for the scenarios and the status quo are written as
+#'   '.csv' files into the folder '<yyyymmdd_hhmm>_management_scenarios'.
 #'
 #' @importFrom dplyr bind_rows distinct left_join select %>%
 #' @importFrom purrr list_c map map_chr map_lgl map2 map2_chr
@@ -84,6 +83,8 @@ prepare_management_scenario_inputs <- function(project_path,
     scen_names <- str_remove(scenarios, '.farm$')
   }
 
+  # Check if required files for the types farmr or txt are available in the
+  # project path
   if(file_type == 'farmr') {
     mgt_files <- paste0(rep(c(status_quo, scen_names), each = 2),
                         c('.farm', '.mgts'))
@@ -110,6 +111,7 @@ prepare_management_scenario_inputs <- function(project_path,
     }
   }
 
+
   if(file_type == 'farmr') {
     # Load the scenario farmR projects into a list
     farm_scen <- map(scen_names, ~ read_farmr(paste(project_path,
@@ -128,11 +130,15 @@ prepare_management_scenario_inputs <- function(project_path,
   }
 
   # For all scenarios the following workflow is executed:
+  # A) If it is a type = 'farmr' project:
   # - load each found farmR project
   # - If start/end year was not defined the maximum range of scheduled years
   #   from the first scenario is used for all farmR projects (if everything
   #   is correct all farmR projects should have the same date range)
   # - the scheduled operations are written to the project folder
+  # B)If it is a type = 'txt' project:
+  # - The mgt_file_path is set to the respective folder
+  # Both types 'farmr' and 'txt':
   # - land use labels are shortened to 16 characters (although this is not
   #   necessary anymore and 24 characters are now possible, this is done
   #   to leave some space for adding ids to the text strings).
@@ -155,8 +161,8 @@ prepare_management_scenario_inputs <- function(project_path,
       }
 
       write_farmr_ops(farm_scen[[scen_i]],
-      start_year = start_year,
-      end_year = end_year)
+        start_year = start_year,
+        end_year = end_year)
 
       mgt_file_path <- project_path
     } else if (file_type == 'txt') {
@@ -191,14 +197,20 @@ prepare_management_scenario_inputs <- function(project_path,
   # Load status quo files ---------------------------------------------------
   #
   # The same workflow as for the scenarios is implemented for the status quo
-  # farmR project.
-  # The written farmR input files will be left in the SWAT+ project folder
+  #
+  # The written input files will be written and left in the SWAT+ project folder
   # to guarantee that the scheduled operations in the SWAT+ project match
   # the operations which are prepared for the scenarios.
   #
   cat('Preparing and loading input files for status quo:\n')
 
-  write_farmr_ops(farm_squo, start_year = start_year, end_year = end_year)
+  if(file_type == 'farmr') {
+    write_farmr_ops(farm_squo, start_year = start_year, end_year = end_year)
+    mgt_file_path <- project_path
+  } else if (file_type == 'txt') {
+    mgt_file_path <- paste0(project_path, '/', status_quo)
+  }
+
 
   update_landuse_labels(mgt_file_path)
 
@@ -444,6 +456,7 @@ update_dates <- function(sch_quo, sch_scn, sch_name,
 #' @keywords internal
 #'
 add_op_date <- function(tbl, start_year) {
+  if (is.null(start_year)) start_year <- 1970
   tbl %>%
     mutate(.,
            year = ifelse(op_typ == 'skip', 1, 0),
