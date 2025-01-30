@@ -57,7 +57,8 @@
 #'
 update_landuse <- function(swat_inputs, hru_id, nswrm,
                            lum_plnt, lum_mgt, lum_cn2,
-                           lum_cpr, lum_ovn, lum_tile) {
+                           lum_cpr, lum_ovn, lum_tile,
+                           lum_grww, lum_vfs, lum_bmp) {
   # General data type/structure checks
   stopifnot(is.numeric(hru_id))
   stopifnot(is.character(nswrm))
@@ -74,6 +75,12 @@ update_landuse <- function(swat_inputs, hru_id, nswrm,
   stopifnot(length(lum_ovn) <= 1)
   stopifnot(is.character(lum_tile) | is.null(lum_tile))
   stopifnot(length(lum_tile) <= 1)
+  stopifnot(is.character(lum_grww) | is.null(lum_grww))
+  stopifnot(length(lum_grww) <= 1)
+  stopifnot(is.character(lum_vfs) | is.null(lum_vfs))
+  stopifnot(length(lum_vfs) <= 1)
+  stopifnot(is.character(lum_bmp) | is.null(lum_bmp))
+  stopifnot(length(lum_bmp) <= 1)
 
   hru_lum <- swat_inputs$hru_data.hru %>%
     filter(., id %in% hru_id) %>%
@@ -99,6 +106,15 @@ update_landuse <- function(swat_inputs, hru_id, nswrm,
   }
   if(lum_tile != '::keep::') {
     hru_lum$tile <- lum_tile
+  }
+  if(lum_grww != '::keep::') {
+    hru_lum$grww <- lum_grww
+  }
+  if(lum_vfs != '::keep::') {
+    hru_lum$vfs <- lum_vfs
+  }
+  if(lum_bmp != '::keep::') {
+    hru_lum$bmp <- lum_bmp
   }
 
   # Find all alternative names with for the input argument 'nswrm'

@@ -64,7 +64,10 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs) {
                                   lum_cn2  = def_nswrm$cn2,
                                   lum_cpr  = def_nswrm$cons_prac,
                                   lum_ovn  = def_nswrm$ov_mann,
-                                  lum_tile = def_nswrm$tile)
+                                  lum_tile = def_nswrm$tile,
+                                  lum_grww = def_nswrm$grww,
+                                  lum_vfs = def_nswrm$vfs,
+                                  lum_bmp = def_nswrm$bmp)
 
     if(!def_nswrm$lum_dtl %in% c('::keep::', 'null')) {
       swat_inputs <- add_dtl_op(swat_inputs, hru_id, def_nswrm$lum_dtl)
