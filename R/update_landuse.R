@@ -40,9 +40,24 @@
 #'   `lum_ovn = 'null'` then 'ov_mann' will be set 'null' in the landuse.lum.
 #' @param lum_tile The tile drainage parametrization which is assigned to the
 #'   land use. A single character string must be provided. The passed value must
-#'   be defined in the 'ovn_table.lum' intput file. If `lum_tile = '::keep::`,
+#'   be defined in the 'tiledrain.str' intput file. If `lum_tile = '::keep::`,
 #'   then the values of 'tile' of each HRU will be preserved.  If
 #'   `lum_tile = null'` then 'tile' will be set 'null' in the landuse.lum.
+#' @param lum_grww Grassed waterway parametrization which is assigned to the
+#'   land use. A single character string must be provided. The passed value must
+#'   be defined in the 'grassedww.str' intput file. If `lum_tile = '::keep::`,
+#'   then the values of 'grww' of each HRU will be preserved.  If
+#'   `lum_grww = null'` then 'grww' will be set 'null' in the landuse.lum.
+#' @param lum_vfs Filter strip parametrization which is assigned to the
+#'   land use. A single character string must be provided. The passed value must
+#'   be defined in the 'filterstrip.str' intput file. If `lum_vfs = '::keep::`,
+#'   then the values of 'vfs' of each HRU will be preserved.  If
+#'   `lum_vfs = null'` then 'vfs' will be set 'null' in the landuse.lum.
+#' @param lum_bmp User BMP parametrization which is assigned to the
+#'   land use. A single character string must be provided. The passed value must
+#'   be defined in the 'bmpuser.str' intput file. If `lum_bmp = '::keep::`,
+#'   then the values of 'bmp' of each HRU will be preserved.  If
+#'   `lum_bmp = null'` then 'bmp' will be set 'null' in the landuse.lum.
 #'
 #' @returns The SWAT+ input tables list with the updated landuse.lum and
 #'   hru-data.hru input tables.
