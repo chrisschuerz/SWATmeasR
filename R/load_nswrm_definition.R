@@ -51,6 +51,11 @@ load_nswrm_loc <- function(file_path, nswrm_defs, swat_inputs, overwrite) {
         col_names[col_miss])
   }
 
+  # Check if all location ids are unique.
+  if(any(table(nswrm_loc$id) != 1)) {
+    stop("The 'id' values of the nswrm locations must be unique.")
+  }
+
   # Add a column which defines the type of NSWRM, such as 'management',
   # 'land_use', 'pond', ...
   nswrm_loc <- nswrm_loc %>%
