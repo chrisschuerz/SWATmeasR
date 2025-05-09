@@ -165,6 +165,61 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs) {
   }
   # -------------------------------------------------------------------------
 
+  # Implement end of field wetlands -----------------------------------------
+  nswrm_eofw <- unique(nswrm_loc_sel$nswrm[nswrm_loc_sel$type == 'eof_wetland'])
+  for(nswrm_i in nswrm_eofw) {
+    hru_id <- unique(unlist(nswrm_loc_sel$obj_id[nswrm_loc_sel$nswrm == nswrm_i]))
+    eofw_def_sel <- filter(nswrm_defs$eof_wetland, nswrm == nswrm_i)
+    wet_wet_sel  <- select(eofw_def_sel, rel:nut)
+    hyd_wet_sel  <- select(eofw_def_sel, hru_ps:hru_frac)
+
+    swat_inputs <- implement_eofwetl(swat_inputs,
+                                     hru_id      = hru_id,
+                                     lu_mgt_sel  = eofw_def_sel$lu_mgt,
+                                     wet_wet_sel = wet_wet_sel,
+                                     hyd_wet_sel = hyd_wet_sel)
+
+    swat_inputs$implemented_nswrms <-
+      update_implemented_nswrms(swat_inputs$implemented_nswrms,
+                                nswrm_i = 'wetland',
+                                obj_typ_i = 'hru',
+                                obj_id_i = wet_def_sel$hru_id,
+                                obj_typ_upd_i = NA_character_,
+                                obj_id_upd_i = NA_integer_)
+  }
+
+  for (nswrm_i in nswrm_land_use) {
+    hru_id <- unique(unlist(nswrm_loc_sel$obj_id[nswrm_loc_sel$nswrm == nswrm_i]))
+    def_nswrm <- filter(nswrm_defs$land_use, nswrm == nswrm_i)
+    swat_inputs <- update_landuse(swat_inputs,
+                                  hru_id   = hru_id,
+                                  nswrm    = def_nswrm$nswrm,
+                                  lum_plnt = def_nswrm$plnt_com,
+                                  lum_mgt  = def_nswrm$mgt,
+                                  lum_cn2  = def_nswrm$cn2,
+                                  lum_cpr  = def_nswrm$cons_prac,
+                                  lum_ovn  = def_nswrm$ov_mann,
+                                  lum_tile = def_nswrm$tile,
+                                  lum_grww = def_nswrm$grww,
+                                  lum_vfs = def_nswrm$vfs,
+                                  lum_bmp = def_nswrm$bmp)
+
+    if(!def_nswrm$lum_dtl %in% c('::keep::', 'null')) {
+      swat_inputs <- add_dtl_op(swat_inputs, hru_id, def_nswrm$lum_dtl)
+    }
+
+    swat_inputs$implemented_nswrms <-
+      update_implemented_nswrms(swat_inputs$implemented_nswrms,
+                                nswrm_i = nswrm_i,
+                                obj_typ_i = 'hru',
+                                obj_id_i = hru_id,
+                                obj_typ_upd_i = NA_character_,
+                                obj_id_upd_i = NA_integer_)
+    }
+
+
+  # -------------------------------------------------------------------------
+
   return(swat_inputs)
 }
 

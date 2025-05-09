@@ -101,6 +101,109 @@ implement_wetlands <- function(swat_inputs, hru_id, to_cha_id,
   return(swat_inputs)
 }
 
+#' Implement end of field wetlands.
+#'
+#' Surface storage is added to the land objects defined by the `hru_id`, by
+#' parameterizing a wetland in `wetland.wet` and `hydrology.wet` and adding this
+#' wetland as surface storage in `hru-data.hru`. If an HRU was drained, the
+#' drainage is removed and a new entry in `landuse.lum` is generated for that
+#' HRU. Optionally, a `to_cha_id` can be defined if water from wetlands should be
+#' routed directly into a channel.
+#'
+#' @param swat_inputs List with SWAT+ input files.
+#'
+#' @param hru_id HRU IDs to which surface water storage (wetland) will be added.
+#'
+#'   The input can be a single numeric value to replace a single HRU, or a
+#'   vector of numeric values if multiple HRUs are modified.
+#'
+#' @param to_cha_id (Optional) channel IDs into which water from wetland is
+#'   routed. (all water from that HRU is then routed into the defined channel
+#'   instead of the initially defined neighouring hydrological objects)
+#'
+#'   The input can be a single numeric value or a vector of values. `to_cha_id`
+#'   must be the same length as `hru_id`. Each channel ID corresponds to the
+#'   respective `hru_id`.
+#'
+#' @param lu_mgt_sel Selected land use which should be employed for the wetland.
+#'   (User defined in the wetlands definition table or NA if not set)
+#'
+#' @param wet_wet_sel Table with rel, sed and nut pointers for the added
+#'   wetlands. The pointers will be written into wetlands.wet
+#'
+#' @param hyd_wet_sel Table with hydrology.wet parameters for the implemented
+#'   wetlands.
+#'
+#' @returns The `swat_inputs` list with updated input tables which include all
+#'   necessary changes to add surface water storage to HRUs and remove tile
+#'   flow.
+#'
+#' @keywords internal
+#'
+implement_eofwetl <- function(swat_inputs, hru_id,
+                              lu_mgt_sel, wet_wet_sel, hyd_wet_sel) {
+  # Check if an HRU is already a wetland
+  is_wetl <- check_is_wetland(swat_inputs, hru_id)
+
+  # Exclude that HRUs/channels from the ones which will be replaced/modified/
+  hru_id    <- hru_id[!is_wetl]
+  to_cha_id <- to_cha_id[!is_wetl]
+
+  # If there are HRUs remaining where wetlands should be added loop over all
+  # land objects and update the respective input files.
+  if(length(hru_id) > 0) {
+    for (i in 1:length(hru_id)) {
+      hru_i <- hru_id[i]
+      # Generate a character string for the HRU ID for naming in the input files.
+      hru_i_chr <- add_lead_zeros(hru_i, swat_inputs$hru_data.hru$id)
+
+      to_cha_i   <- to_cha_id[i]
+
+      wet_wet_i <- wet_wet_sel[i, ]
+      hyd_wet_i <- hyd_wet_sel[i, ]
+      lu_mgt_i <- lu_mgt_sel[i]
+
+      # Update the wetland.wet input file by adding the new wetland for hru_i
+      swat_inputs$wetland.wet   <- update_wet_wet(swat_inputs$wetland.wet,
+                                                  wet_wet_i,
+                                                  hru_i_chr)
+      # Update hydrology.wet by adding the parameters for the new wetland in hru_i
+      swat_inputs$hydrology.wet <- update_hyd_wet(swat_inputs$hydrology.wet,
+                                                  hyd_wet_i,
+                                                  hru_i_chr)
+
+      has_drn <- is_hru_drained(swat_inputs, hru_i)
+
+      # Copy and rename the landuse.lum definition of hru_i and remove any tile.
+      swat_inputs$landuse.lum   <- update_lum_wetl(swat_inputs$landuse.lum,
+                                                   swat_inputs$hru_data.hru,
+                                                   lu_mgt_i,
+                                                   hru_i,
+                                                   hru_id_chr)
+      # Update hru-data.hru by adding the surface storage and updating lu_mgt.
+      lum_name_i <- swat_inputs$landuse.lum$name[nrow(swat_inputs$landuse.lum)]
+      swat_inputs$hru_data.hru  <- update_hru_hru_wetl(swat_inputs$hru_data.hru,
+                                                       lum_name_i,
+                                                       hru_i,
+                                                       hru_i_chr)
+      if(!is.na(to_cha_i) | has_drn) {
+        swat_inputs$file_updated['rout_unit.con'] <- TRUE
+        swat_inputs$rout_unit.con <- update_rtu_con_wetl(swat_inputs$rout_unit.con,
+                                                         to_cha_i,
+                                                         has_drn,
+                                                         hru_i)
+      }
+    }
+    # Set the input files which are adjusted by pond replacement to 'modified'
+    # so that they will be written when writing output files.
+    file_upd <- c('wetland.wet', 'hydrology.wet', 'landuse.lum', 'hru_data.hru')
+    swat_inputs$file_updated[file_upd] <- TRUE
+  }
+
+  return(swat_inputs)
+}
+
+
 #' Check if HRUs are already wetlands..
 #'
 #' @param swat_inputs List with SWAT+ input files.
