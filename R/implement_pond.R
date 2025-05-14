@@ -393,9 +393,11 @@ update_res_con_pond <- function(res_con, rtu_con, hru_id, to_cha_id, res_id, lab
 update_res_res_pond <- function(res_res, res_res_pnd, hru_id, label) {
   res_add <- tibble(id = max(res_res$id, 0) + 1,
                     name = paste0(label, min(hru_id)),
-                    init = 'initres1',
-                    hyd  = name) %>%
-    bind_cols(., res_res_pnd)
+                    init = res_res_pnd$init,
+                    hyd  = name,
+                    rel  = res_res_pnd$rel,
+                    sed  = res_res_pnd$sed,
+                    nut  = res_res_pnd$nut)
 
   res_res <- bind_rows(res_res, res_add)
 

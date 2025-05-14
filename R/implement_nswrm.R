@@ -87,7 +87,7 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs) {
   wet_loc_sel <- filter(nswrm_loc_sel, type == 'wetland')
   if(nrow(wet_loc_sel) > 0) {
     wet_def_sel <- filter(nswrm_defs$wetland, hru_id %in% unlist(wet_loc_sel$obj_id))
-    wet_wet_sel  <- select(wet_def_sel, rel:nut)
+    wet_wet_sel  <- select(wet_def_sel, init:nut)
     hyd_wet_sel  <- select(wet_def_sel, hru_ps:hru_frac)
 
     swat_inputs <- implement_wetlands(swat_inputs,
@@ -113,7 +113,7 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs) {
     cwtl_def_match <- map_lgl(nswrm_defs$constr_wetland$hru_id,
                               ~ match_ids(cwtl_loc_sel$obj_id, .x))
     cwtl_def_sel <- nswrm_defs$constr_wetl[cwtl_def_match,]
-    res_res_sel  <- select(cwtl_def_sel, rel:nut)
+    res_res_sel  <- select(cwtl_def_sel, init:nut)
     hyd_res_sel  <- select(cwtl_def_sel, area_ps:shp_co2)
 
     swat_inputs <- replace_by_ponds(swat_inputs,
@@ -142,7 +142,7 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs) {
     pond_def_match <- map_lgl(nswrm_defs$pond$hru_id,
                               ~ match_ids(pond_loc_sel$obj_id, .x))
     pond_def_sel <- nswrm_defs$pond[pond_def_match,]
-    res_res_sel  <- select(pond_def_sel, rel:nut)
+    res_res_sel  <- select(pond_def_sel, init:nut)
     hyd_res_sel  <- select(pond_def_sel, area_ps:shp_co2)
 
     swat_inputs <- replace_by_ponds(swat_inputs,
@@ -170,7 +170,7 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs) {
   for(nswrm_i in nswrm_eofw) {
     hru_id <- unique(unlist(nswrm_loc_sel$obj_id[nswrm_loc_sel$nswrm == nswrm_i]))
     eofw_def_sel <- filter(nswrm_defs$eof_wetland, nswrm == nswrm_i)
-    wet_wet_sel  <- select(eofw_def_sel, rel:nut)
+    wet_wet_sel  <- select(eofw_def_sel, init:nut)
     hyd_wet_sel  <- select(eofw_def_sel, hru_ps:hru_frac)
 
     swat_inputs <- implement_eofwetl(swat_inputs,
@@ -179,13 +179,16 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs) {
                                      wet_wet_sel = wet_wet_sel,
                                      hyd_wet_sel = hyd_wet_sel)
 
+    eof_names <- paste0('eof',add_lead_zeros(hru_id, swat_inputs$hru_data.hru$id))
+    eof_ids <- swat_inputs$hru_data.hru$id[swat_inputs$hru_data.hru$name %in% eof_names]
+
     swat_inputs$implemented_nswrms <-
       update_implemented_nswrms(swat_inputs$implemented_nswrms,
-                                nswrm_i = 'wetland',
+                                nswrm_i = 'eof_wetland',
                                 obj_typ_i = 'hru',
-                                obj_id_i = wet_def_sel$hru_id,
-                                obj_typ_upd_i = NA_character_,
-                                obj_id_upd_i = NA_integer_)
+                                obj_id_i = hru_id,
+                                obj_typ_upd_i = 'hru',
+                                obj_id_upd_i = eof_ids)
   }
 
   for (nswrm_i in nswrm_land_use) {

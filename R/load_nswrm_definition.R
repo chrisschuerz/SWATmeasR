@@ -599,13 +599,14 @@ load_water_def <- function(file_path, swat_inputs, type) {
     def_tbl <- check_settings_column(def_tbl, par_i, 'numeric', 'all')
   }
 
+  def_tbl <- check_settings_column(def_tbl, 'init', 'character', 'all')
   def_tbl <- check_settings_column(def_tbl, 'rel', 'character', 'all')
   def_tbl <- check_settings_column(def_tbl, 'sed', 'character', 'all')
   def_tbl <- check_settings_column(def_tbl, 'nut', 'character', 'all')
 
   def_tbl <- select(def_tbl, any_of(c('hru_id', 'nswrm', 'lu_mgt')),
                     any_of(c('cha_to_id', 'cha_from_id')),
-                    all_of(hyd_par_names), rel, sed, nut)
+                    all_of(hyd_par_names), any_of('init'), rel, sed, nut)
   if(type != 'eof_wetland') {
     hru_id_na <- is.na(def_tbl$hru_id)
     is_no_hru_id    <- map_lgl(def_tbl$hru_id, ~ any(!.x  %in% swat_inputs$hru_data.hru$id))
@@ -634,6 +635,9 @@ load_water_def <- function(file_path, swat_inputs, type) {
     is_no_cha_fr_id <- FALSE
 
   }
+
+  is_no_init_name  <- ! (def_tbl$rel %in% swat_inputs$initial.res$name |
+                         is.na(def_tbl$init))
   is_no_rel_name  <- ! (def_tbl$rel %in% swat_inputs$res_rel.dtl_names |
                         is.na(def_tbl$rel))
   is_no_sed_name  <- ! (def_tbl$sed %in% swat_inputs$sediment.res$name |
@@ -643,8 +647,8 @@ load_water_def <- function(file_path, swat_inputs, type) {
 
   if (any(c(hru_id_na, is_no_lu_mgt, cha_id_na, is_no_hru_id,
             is_no_cha_to_id, is_no_cha_fr_id,
-            is_no_rel_name, is_no_sed_name,
-            is_no_nut_name))) {
+            is_no_init_name, is_no_rel_name,
+            is_no_sed_name,  is_no_nut_name))) {
     if(any(hru_id_na)) {
       hru_na_msg <- paste0("Row IDs where 'hru_id' returns NA: ",
                            paste(which(hru_id_na), collapse = ', '), '\n')
@@ -685,6 +689,13 @@ load_water_def <- function(file_path, swat_inputs, type) {
     } else {
       no_cha_fr_msg <- ''
     }
+    if(any(is_no_init_name)) {
+      no_init_name_msg <-
+        paste0("Row IDs where 'init' is not defined in initial.res: ",
+               paste(which(is_no_init_name), collapse = ', '), '\n')
+    } else {
+      no_init_name_msg <- ''
+    }
     if(any(is_no_rel_name)) {
       no_rel_name_msg <-
         paste0("Row IDs where 'rel' is not defined in res_rel.dtl: ",
@@ -711,7 +722,7 @@ load_water_def <- function(file_path, swat_inputs, type) {
          'definition input table: \n\n',
          hru_na_msg, cha_na_msg, no_hru_msg, no_lum_msg,
          no_cha_to_msg, no_cha_fr_msg,
-         no_rel_name_msg, no_sed_name_msg, no_nut_name_msg,
+         no_init_name_msg, no_rel_name_msg, no_sed_name_msg, no_nut_name_msg,
          '\n\nPlease fix the reported issues in the .csv file and reload it.')
   }
 
@@ -726,7 +737,11 @@ load_water_def <- function(file_path, swat_inputs, type) {
                        'wetland',
                        'null')
   }
+
   type_lbl <- ifelse(type %in% c('pond', 'constr_wetland'), 'res', 'wet')
+  init_dflt <- ifelse(paste0('init', type_lbl, 1) %in% swat_inputs$initial.res$name,
+                      paste0('init', type_lbl, 1),
+                      'null')
   sed_dflt <- ifelse(paste0('sed', type_lbl, 1) %in% swat_inputs$sediment.res$name,
                      paste0('sed', type_lbl, 1),
                      'null')
@@ -753,6 +768,7 @@ load_water_def <- function(file_path, swat_inputs, type) {
              evap_co = ifelse(is.na(evap_co), 0.6, evap_co),
              shp_co1 = ifelse(is.na(shp_co1), 0, shp_co1),
              shp_co2 = ifelse(is.na(shp_co2), 0, shp_co2),
+             init    = ifelse(is.na(init), init_dflt, init),
              rel     = ifelse(is.na(rel), rel_dflt, rel),
              sed     = ifelse(is.na(sed), sed_dflt, sed),
              nut     = ifelse(is.na(nut), nut_dflt, nut)
@@ -782,9 +798,10 @@ load_water_def <- function(file_path, swat_inputs, type) {
              vol_dp_a    = ifelse(is.na(vol_dp_a), 1.0, vol_dp_a),
              vol_dp_b    = ifelse(is.na(vol_dp_b), 1.0, vol_dp_b),
              hru_frac    = ifelse(is.na(hru_frac), 0.5, hru_frac),
-             rel     = ifelse(is.na(rel), rel_dflt, rel),
-             sed     = ifelse(is.na(sed), sed_dflt, sed),
-             nut     = ifelse(is.na(nut), nut_dflt, nut)
+             init        = ifelse(is.na(init), init_dflt, init),
+             rel         = ifelse(is.na(rel), rel_dflt, rel),
+             sed         = ifelse(is.na(sed), sed_dflt, sed),
+             nut         = ifelse(is.na(nut), nut_dflt, nut)
 
              )
 

@@ -147,56 +147,55 @@ implement_eofwetl <- function(swat_inputs, hru_id,
 
   # Exclude that HRUs/channels from the ones which will be replaced/modified/
   hru_id    <- hru_id[!is_wetl]
-  to_cha_id <- to_cha_id[!is_wetl]
 
   # If there are HRUs remaining where wetlands should be added loop over all
   # land objects and update the respective input files.
   if(length(hru_id) > 0) {
-    for (i in 1:length(hru_id)) {
-      hru_i <- hru_id[i]
       # Generate a character string for the HRU ID for naming in the input files.
-      hru_i_chr <- add_lead_zeros(hru_i, swat_inputs$hru_data.hru$id)
+      hru_id_chr <- add_lead_zeros(hru_id, swat_inputs$hru_data.hru$id)
 
-      to_cha_i   <- to_cha_id[i]
-
-      wet_wet_i <- wet_wet_sel[i, ]
-      hyd_wet_i <- hyd_wet_sel[i, ]
-      lu_mgt_i <- lu_mgt_sel[i]
-
-      # Update the wetland.wet input file by adding the new wetland for hru_i
-      swat_inputs$wetland.wet   <- update_wet_wet(swat_inputs$wetland.wet,
-                                                  wet_wet_i,
-                                                  hru_i_chr)
-      # Update hydrology.wet by adding the parameters for the new wetland in hru_i
-      swat_inputs$hydrology.wet <- update_hyd_wet(swat_inputs$hydrology.wet,
-                                                  hyd_wet_i,
-                                                  hru_i_chr)
-
-      has_drn <- is_hru_drained(swat_inputs, hru_i)
-
-      # Copy and rename the landuse.lum definition of hru_i and remove any tile.
-      swat_inputs$landuse.lum   <- update_lum_wetl(swat_inputs$landuse.lum,
-                                                   swat_inputs$hru_data.hru,
-                                                   lu_mgt_i,
-                                                   hru_i,
-                                                   hru_id_chr)
       # Update hru-data.hru by adding the surface storage and updating lu_mgt.
-      lum_name_i <- swat_inputs$landuse.lum$name[nrow(swat_inputs$landuse.lum)]
-      swat_inputs$hru_data.hru  <- update_hru_hru_wetl(swat_inputs$hru_data.hru,
-                                                       lum_name_i,
-                                                       hru_i,
-                                                       hru_i_chr)
-      if(!is.na(to_cha_i) | has_drn) {
-        swat_inputs$file_updated['rout_unit.con'] <- TRUE
-        swat_inputs$rout_unit.con <- update_rtu_con_wetl(swat_inputs$rout_unit.con,
-                                                         to_cha_i,
-                                                         has_drn,
-                                                         hru_i)
-      }
-    }
+      # lum_name_i <- swat_inputs$landuse.lum$name[nrow(swat_inputs$landuse.lum)]
+      swat_inputs$hru_data.hru   <- update_hru_hru_eof(swat_inputs$hru_data.hru,
+                                                       hru_id,
+                                                       lu_mgt_sel)
+
+      swat_inputs$hru.con        <- update_hru_con_eof(swat_inputs$hru.con,
+                                                            hru_id,
+                                                            hyd_wet_sel$hru_frac)
+
+      swat_inputs$hydrology.wet  <- update_hyd_wet_eof(swat_inputs$hydrology.wet,
+                                                       hru_id_chr,
+                                                       hyd_wet_sel)
+
+      swat_inputs$wetland.wet    <- update_wet_wet_eof(swat_inputs$wetland.wet,
+                                                       hru_id_chr,
+                                                       wet_wet_sel)
+
+      hru_id_eof <- swat_inputs$hru_data.hru %>%
+        filter(name %in% paste0('eof', hru_id_chr)) %>%
+        mutate(id_init = as.numeric(str_remove(name, 'eof'))) %>%
+        select(id, id_init)
+
+      swat_inputs$rout_unit.def  <- update_def_eof(swat_inputs$rout_unit.def,
+                                                   hru_id_eof)
+      swat_inputs$ls_unit.def    <- update_def_eof(swat_inputs$ls_unit.def,
+                                                   hru_id_eof)
+      swat_inputs$rout_unit.ele  <- update_ele_eof(swat_inputs$rout_unit.ele,
+                                                   hru_id_chr,
+                                                   hyd_wet_sel)
+      swat_inputs$ls_unit.ele    <- update_ele_eof(swat_inputs$ls_unit.ele,
+                                                   hru_id_chr,
+                                                   hyd_wet_sel)
+
+      swat_inputs$object.cnt     <- update_obj_cnt_eof(swat_inputs$object.cnt,
+                                                       length(hru_id))
+
     # Set the input files which are adjusted by pond replacement to 'modified'
     # so that they will be written when writing output files.
-    file_upd <- c('wetland.wet', 'hydrology.wet', 'landuse.lum', 'hru_data.hru')
+    file_upd <- c('hru_data.hru', 'hru.con', 'hydrology.wet', 'wetland.wet',
+                  'rout_unit.def', 'rout_unit.ele', 'ls_unit.def', 'ls_unit.ele',
+                  'object.cnt')
     swat_inputs$file_updated[file_upd] <- TRUE
   }
 
@@ -262,11 +261,13 @@ is_hru_drained <- function(swat_inputs, hru_id) {
 #' @keywords internal
 #'
 update_wet_wet <- function(wet_wet, wet_wet_i, hru_id_chr) {
-  wet_add <- tibble(id = max(wet_wet$id, 0) + 1,
+  wet_add <- tibble(id   = max(wet_wet$id, 0) + 1,
                     name = paste0('wet', hru_id_chr),
-                    init = 'initwet1',
-                    hyd = paste0('hydwet', hru_id_chr)) %>%
-    bind_cols(., wet_wet_i)
+                    init = wet_wet_i$init,
+                    hyd  = paste0('hydwet', hru_id_chr),
+                    rel  = wet_wet_i$rel,
+                    sed  = wet_wet_i$sed,
+                    nut  = wet_wet_i$nut)
 
   wet_wet <- bind_rows(wet_wet, wet_add)
 
@@ -551,4 +552,134 @@ add_connection <- function(obj_con, id_i, obj_typ_add, obj_id_add, hyd_typ_add,
   obj_con[id_i,] <- obj_con_i
 
   return(obj_con)
+}
+
+update_hru_hru_eof <- function(hru_data, hru_id, lu_mgt_sel) {
+  hru_eof <- hru_data %>%
+    filter(id %in% hru_id) %>%
+    mutate(name     = str_replace(name, 'hru', 'eof'),
+           surf_stor = name,
+           lu_mgt   = lu_mgt_sel,
+           id       = nrow(hru_data) + 1:nrow(.))
+  hru_data <- bind_rows(hru_data, hru_eof)
+
+  return(hru_data)
+}
+
+
+update_hru_con_eof <- function(hru_con, hru_id, hru_frac) {
+  hru_con_init <- hru_con %>%
+    filter(id %in% hru_id)
+
+  hru_con_eof <- hru_con_init %>%
+    mutate(id = nrow(hru_con) + 1:nrow(.),
+           name     = str_replace(name, 'hru', 'eof'),
+           area = hru_frac * area)
+
+  hru_con_init <- hru_con_init %>%
+    mutate(area = (1 - hru_frac) * area,
+           out_tot = 1,
+           obj_typ_1 = 'hru',
+           obj_id_1  = hru_con_eof$id,
+           hyd_typ_1 = 'tot',
+           frac_1    = 1.0)
+
+  hru_con <- bind_rows(hru_con_init, hru_con) %>%
+    distinct(., id, .keep_all = TRUE) %>%
+    arrange(id) %>%
+    bind_rows(hru_con_eof)
+
+  return(hru_con)
+}
+
+update_hyd_wet_eof <- function(hyd_wet, hru_id_chr, hyd_wet_sel) {
+  hyd_wet_eof <- hyd_wet_sel[rep(1, length(hru_id_chr)),]
+  hyd_wet_eof <- hyd_wet_eof %>%
+    mutate(name = paste0('hydeof', hru_id_chr),
+           .before = 1) %>%
+    mutate(hru_frac = 1)
+
+  hyd_wet <- bind_rows(hyd_wet, hyd_wet_eof)
+
+  return(hyd_wet)
+}
+
+update_wet_wet_eof <- function(wet_wet, hru_id_chr, wet_wet_sel) {
+  wet_wet_eof <- wet_wet_sel[rep(1, length(hru_id_chr)),] %>%
+    mutate(id = nrow(wet_wet) + 1:nrow(.),
+           name = paste0('eof', hru_id_chr), .before = 1) %>%
+    mutate(hyd = paste0('hydeof', hru_id_chr), .before = rel)
+
+  wet_wet <- bind_rows(wet_wet, wet_wet_eof)
+
+  return(wet_wet)
+}
+
+update_def_eof <- function(def_tbl, hru_id_eof) {
+  for(i in 1:nrow(hru_id_eof)) {
+    i_ele <- which(map_lgl(def_tbl$elem,
+                           ~ hru_id_eof$id_init[i] %in% .x))
+    ele_ids_i <- def_tbl$elem[[i_ele]]
+    ele_ids_i[ele_ids_i == hru_id_eof$id_init[i]] <- hru_id_eof$id[i]
+    def_tbl$elem[[i_ele]] <- sort(ele_ids_i)
+  }
+
+  return(def_tbl)
+}
+
+update_ele_eof <- function(ele_tbl, hru_id_chr, hyd_wet_sel) {
+  hru_names <- paste0('hru', hru_id_chr)
+
+  ele_eof <- ele_tbl %>%
+    filter(name %in% paste0('hru', hru_id_chr)) %>%
+    mutate(id     = nrow(ele_tbl) + 1:nrow(.),
+           name   = str_replace(name, 'hru', 'eof'))
+
+  if('frac' %in% names(ele_tbl)) {
+    ele_eof <- ele_eof %>%
+      mutate(obj_id = id,
+             frac = hyd_wet_sel$hru_frac * frac)
+    ele_tbl <- ele_tbl %>%
+      mutate(frac = ifelse(name %in% hru_names,
+                           (1 - hyd_wet_sel$hru_frac) * frac,
+                           frac))
+  } else {
+    ele_eof <- ele_eof %>%
+      mutate(obj_typ_no = id,
+             bsn_frac = hyd_wet_sel$hru_frac * bsn_frac,
+             sub_frac = hyd_wet_sel$hru_frac * sub_frac,
+             reg_frac = hyd_wet_sel$hru_frac * reg_frac,
+      )
+    ele_tbl <- ele_tbl %>%
+      mutate(bsn_frac = ifelse(name %in% hru_names,
+                               (1 - hyd_wet_sel$hru_frac) * bsn_frac,
+                               bsn_frac),
+             sub_frac = ifelse(name %in% hru_names,
+                               (1 - hyd_wet_sel$hru_frac) * sub_frac,
+                               reg_frac),
+             reg_frac = ifelse(name %in% hru_names,
+                               (1 - hyd_wet_sel$hru_frac) * reg_frac,
+                               reg_frac))
+  }
+
+  ele_tbl <- bind_rows(ele_tbl, ele_eof)
+
+  return(ele_tbl)
+}
+
+#' Update the object.cnt input table.
+#'
+#' The total object count and the count of reservoirs are increased by one.
+#'
+#' @param obj_cnt object.cnt input table.
+#'
+#' @returns Updated object.cnt input table.
+#'
+#' @keywords internal
+#'
+update_obj_cnt_eof <- function(obj_cnt, n_hru) {
+  obj_cnt$obj <- obj_cnt$obj + n_hru
+  obj_cnt$hru <- obj_cnt$hru + n_hru
+
+  return(obj_cnt)
 }
