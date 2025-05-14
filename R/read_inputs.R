@@ -35,8 +35,10 @@ read_swat_inputs <- function(project_path) {
     hru.con           = read_con_file(paste0(project_path, '/hru.con')),
     rout_unit.rtu     = read_tbl(paste0(project_path, '/rout_unit.rtu')),
     rout_unit.con     = read_con_file(paste0(project_path, '/rout_unit.con')),
-    rout_unit.def     = read_tbl(paste0(project_path, '/rout_unit.def')),
+    rout_unit.def     = read_def(paste0(project_path, '/rout_unit.def')),
     rout_unit.ele     = read_tbl(paste0(project_path, '/rout_unit.ele')),
+    ls_unit.def       = read_def(paste0(project_path, '/ls_unit.def')),
+    ls_unit.ele       = read_tbl(paste0(project_path, '/ls_unit.ele')),
     chandeg.con       = read_con_file(paste0(project_path, '/chandeg.con')),
     reservoir.res     = read_tbl(paste0(project_path, '/reservoir.res'),
                                  col_names = c('id', 'name', 'init', 'hyd',
@@ -69,6 +71,10 @@ read_swat_inputs <- function(project_path) {
                                  col_types = 'cdddddddddd'),
     sediment.res      = read_tbl(paste0(project_path, '/sediment.res')),
     nutrients.res     = read_tbl(paste0(project_path, '/nutrients.res')),
+    initial.res       = read_tbl(paste0(project_path, '/initial.res'),
+                                 col_names = c('name', 'org_min', 'pest',
+                                               'path', 'hmet', 'salt', 'description'),
+                                 col_types = 'ccccccc'),
     res_rel.dtl_names = read_dtl_names(paste0(project_path, '/res_rel.dtl')),
     lum.dtl_names     = read_dtl_names(paste0(project_path, '/lum.dtl')),
     tiledrain.str     = read_tbl(paste0(project_path, '/tiledrain.str')),
@@ -332,6 +338,71 @@ read_con_file <- function(file_path) {
   }
 
   return(con_tbl)
+}
+
+#' Read a SWAT+ .def input file.
+#'
+#' @param file_path Path of the SWAT+ input file.
+#'
+#' @returns The connecitivity input file as a tibble.
+#'
+#' @importFrom data.table fread
+#' @importFrom dplyr across mutate
+#' @importFrom purrr set_names
+#' @importFrom stringr str_trim str_split
+#' @importFrom tibble as_tibble
+#' @importFrom tidyselect matches starts_with
+#'
+#' @keywords internal
+#'
+read_def <- function(file_path) {
+  if(grepl('rout_unit.def', file_path)) {
+    n_skip <- 2
+    col_names <- c('id', 'name', 'elem_tot')
+  } else {
+    n_skip <- 3
+    col_names <- c('id', 'name', 'area', 'elem_tot')
+  }
+
+  def_mtx <- fread(file_path, skip = n_skip,
+                   sep = NULL, sep2 = NULL, header = F) %>%
+    unlist(.) %>%
+    unname(.) %>%
+    str_trim(.) %>%
+    str_split(., '[:space:]+', simplify = T)
+
+  def_tbl <- def_mtx[, 1:length(col_names)] %>%
+    as_tibble(., .name_repair = ~col_names) %>%
+    mutate(id = as.integer(id),
+           elem_tot = as.integer(elem_tot))
+
+  def_elem <- def_mtx[, (length(col_names) + 1):ncol(def_mtx)] %>%
+    t() %>%
+    split(., rep(1:ncol(.), each = nrow(.))) %>%
+    map(., paste_expression) %>%
+    map(., ~eval(parse(text=.x))) %>%
+    unname()
+
+  def_tbl$elem <- def_elem
+
+  return(def_tbl)
+}
+
+#' Build vector expression for parsing
+#'
+#' @param x character vector.
+#'
+#' @returns A character string of structure c(...).
+#'
+#' @keywords internal
+#'
+paste_expression <- function(x) {
+  x[1] <- paste0('c(', x[1])
+  x[length(x)] <- paste0(x[length(x)], ')')
+  x <- paste(x, collapse = ',')
+  x <- gsub(',-', ':', x)
+  x <- gsub(',)', ')', x)
+  return(x)
 }
 
 #' Read the names of decision table definitions from a SWAT+ dtl input file.
