@@ -76,16 +76,28 @@ write_swat_inputs <- function(swat_inputs, file_updated, project_path) {
               fmt_rtu_con)
   }
   if(file_updated['rout_unit.def']) {
-    fmt_rtu_def <- c('%8d', '%-16s', '%8d', '%8d')
-    write_tbl(swat_inputs$rout_unit.def,
+    fmt_rtu_def <- c('%8d', '%16s', '%8d', '%8d')
+    write_def(swat_inputs$rout_unit.def,
               paste0(project_path, '/rout_unit.def'),
               fmt_rtu_def)
   }
   if(file_updated['rout_unit.ele']) {
-    fmt_rtu_ele <- c('%8d', '%-16s', '%16s', '%8d', '%12.5f', '%16d')
+    fmt_rtu_ele <- c('%8d', '%16s', '%-16s', '%8d', '%12.5f', '%16d')
     write_tbl(swat_inputs$rout_unit.ele,
               paste0(project_path, '/rout_unit.ele'),
               fmt_rtu_ele)
+  }
+  if(file_updated['ls_unit.def']) {
+    fmt_lsu_def <- c('%8d', '%16s', '%12.5f', '%8d', '%8d')
+    write_def(swat_inputs$ls_unit.def,
+              paste0(project_path, '/ls_unit.def'),
+              fmt_lsu_def)
+  }
+  if(file_updated['ls_unit.ele']) {
+    fmt_lsu_ele <- c('%8d', '%16s', '%-16s', '%8d', '%12.5f', '%12.5f', '%12.5f')
+    write_tbl(swat_inputs$ls_unit.ele,
+              paste0(project_path, '/ls_unit.ele'),
+              fmt_lsu_ele)
   }
   if(file_updated['chandeg.con']) {
     n_con <- (ncol(swat_inputs$chandeg.con) - 13) / 4
@@ -250,4 +262,131 @@ write_cio <- function(file_cio, file_path, fmt) {
   input_file <- c(file_head, file_lines)
 
   write_lines(input_file, file_path)
+}
+
+#' Write SWAT+ .def file.
+#'
+#' @param tbl SWAT+ .def table.
+#' @param file_path Write path of the SWAT+ input file.
+#' @param fmt Character vector of format strings to define the print format of
+#'   each table column.
+#'
+#' @returns Writes the .def table as a text file in the file path.
+#'
+#' @importFrom dplyr %>%
+#' @importFrom stringr str_remove str_replace str_replace_all
+#' @importFrom purrr map2_df
+#' @importFrom readr write_lines
+#'
+#' @keywords internal
+#'
+write_def <- function(tbl, file_path, fmt) {
+  tbl <- vector_to_elements(tbl)
+
+  n_fmt <- length(fmt)
+  fmt <- c(fmt[1:(n_fmt - 1)], rep(fmt[n_fmt], ncol(tbl) - (n_fmt - 1)))
+  fmt_names <- fmt %>%
+    str_remove(., '\\.[:digit:]+') %>%
+    str_replace(., 'f|d', 's')
+
+  col_names <- colnames(tbl) %>%
+    sprintf(fmt_names, .) %>%
+    paste(., collapse = '  ')
+
+  file_lines <- tbl %>%
+    map2_df(., fmt, ~ sprintf(.y, .x)) %>%
+    apply(., 1, paste, collapse = '  ') %>%
+    str_replace_all(., '  NA', '    ')
+
+  file_head <- paste('SWAT+ input file updated with SWATmeasR at', Sys.time())
+
+  if(str_detect(file_path, 'ls_unit.def')) {
+    file_head <- c(file_head, nrow(tbl))
+  }
+
+  input_file <- c(file_head, col_names, file_lines)
+
+  write_lines(input_file, file_path)
+
+}
+
+#' Convert the elements list column into the columns elem_tot and elements_*
+#' which are the default SWAT+ format.
+#' integer values
+#'
+#' @param tbl SWAT+ input table which has the list column elements.
+#'
+#' @returns The `tbl` where the list column `elements` is converted into the
+#'   columns `elem_tot` and `elements_*`.
+#'
+#' @importFrom dplyr bind_cols select %>%
+#' @importFrom purrr list_rbind map
+#'
+#' @keywords internal
+#'
+vector_to_elements <- function(tbl) {
+  if(!'elem' %in% names(tbl)) {
+    if(!typeof(tbl$elem) == 'list') {
+      stop("Table must contain the list column 'elem'.")
+    }
+  }
+  elem <- tbl$elem %>%
+    map(., ~ values_to_elements(.x)) %>%
+    list_rbind()
+
+  elem_tot <- apply(elem, 1, sum_elements)
+
+  tbl <- tbl %>%
+    select(-elem_tot, -elem) %>%
+    bind_cols(., elem_tot = elem_tot, elem)
+
+  return(tbl)
+}
+
+#' Convert the information on available runs for the simulated variables into
+#' strings that are printed
+#'
+#' @param tbl overview table that provides meta data for all simulation runs for
+#'   all variables saved in the data bases
+#'
+#' @importFrom dplyr %>%
+#' @importFrom purrr map map2 map2_chr
+#' @keywords internal
+#'
+values_to_elements <- function(vals) {
+  vals <- sort(vals)
+  diff_vals <- diff(vals)
+
+  end_seq   <- unique(c(vals[diff_vals != 1], vals[length(vals)]))
+  start_seq <- unique(c(vals[1], vals[which(diff_vals != 1) + 1]))
+
+  map2(start_seq, end_seq, ~build_element_sequence(.x, .y)) %>%
+    unlist() %>%
+    as_tibble_row(., .name_repair = ~ paste0('elem_', 1:length(.)))
+}
+
+#' Build the element value sequence for a pair of start and end value.
+#'
+#' @param strt Numeric start value of sequence
+#' @param end  Numeric end value of sequence
+#'
+#' @keywords internal
+#'
+build_element_sequence <- function(strt, end) {
+  if(strt == end) {
+    strt
+  } else {
+    c(strt, - end)
+  }
+}
+
+
+#' Sum the elements which are not NA
+#'
+#' @param elem Element entries.
+#'
+#' @keywords internal
+#'
+sum_elements <- function(elem) {
+  sum(!is.na(elem))
 }

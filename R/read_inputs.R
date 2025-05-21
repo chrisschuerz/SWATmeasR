@@ -376,6 +376,10 @@ read_def <- function(file_path) {
     mutate(id = as.integer(id),
            elem_tot = as.integer(elem_tot))
 
+  if('area' %in% colnames(def_tbl)) {
+    def_tbl$area <- as.numeric(def_tbl$area)
+  }
+
   def_elem <- def_mtx[, (length(col_names) + 1):ncol(def_mtx)] %>%
     t() %>%
     split(., rep(1:ncol(.), each = nrow(.))) %>%
