@@ -206,7 +206,9 @@ measr_project <- R6Class(
     #' Write updated SWAT+ input files to `project_path`.
     #'
     write_swat_inputs = function(){
-      self$.data$model_setup$modified_inputs$files_written <- TRUE
+      if(any(self$.data$model_setup$modified_inputs$file_updated)) {
+        self$.data$model_setup$modified_inputs$files_written <- TRUE
+      }
       write_swat_inputs(self$.data$model_setup$modified_inputs,
                         self$.data$model_setup$modified_inputs$file_updated,
                         self$.data$meta$project_path)
