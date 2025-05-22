@@ -145,14 +145,22 @@ implement_eofwetl <- function(swat_inputs, hru_id,
   # Check if an HRU is already a wetland
   is_wetl <- check_is_wetland(swat_inputs, hru_id)
 
+  hru_names <- swat_inputs$hru_data.hru$name[swat_inputs$hru_data.hru$id %in% hru_id]
+  eof_names <- str_replace(hru_names, 'hru', 'eof')
+  is_eof <- eof_names %in% swat_inputs$hru_data.hru$name
+
   # Exclude that HRUs/channels from the ones which will be replaced/modified/
-  hru_id    <- hru_id[!is_wetl]
+  hru_id    <- hru_id[!(is_wetl | is_eof)]
 
   # If there are HRUs remaining where wetlands should be added loop over all
   # land objects and update the respective input files.
   if(length(hru_id) > 0) {
       # Generate a character string for the HRU ID for naming in the input files.
-      hru_id_chr <- add_lead_zeros(hru_id, swat_inputs$hru_data.hru$id)
+      hru_id_chr <- swat_inputs$hru_data.hru %>%
+        filter(id %in% hru_id) %>%
+        .$name %>%
+        str_remove(., 'hru')
+      # hru_id_chr <- add_lead_zeros(hru_id, swat_inputs$hru_data.hru$id)
 
       # Update hru-data.hru by adding the surface storage and updating lu_mgt.
       # lum_name_i <- swat_inputs$landuse.lum$name[nrow(swat_inputs$landuse.lum)]
@@ -174,7 +182,7 @@ implement_eofwetl <- function(swat_inputs, hru_id,
 
       hru_id_eof <- swat_inputs$hru_data.hru %>%
         filter(name %in% paste0('eof', hru_id_chr)) %>%
-        mutate(id_init = as.numeric(str_remove(name, 'eof'))) %>%
+        mutate(id_init = hru_id) %>%
         select(id, id_init)
 
       swat_inputs$rout_unit.def  <- update_def_eof(swat_inputs$rout_unit.def,
@@ -572,13 +580,14 @@ update_hru_con_eof <- function(hru_con, hru_id, hru_frac) {
     filter(id %in% hru_id)
 
   hru_con_eof <- hru_con_init %>%
-    mutate(id = nrow(hru_con) + 1:nrow(.),
-           name     = str_replace(name, 'hru', 'eof'),
-           area = hru_frac * area)
+    mutate(id     = nrow(hru_con) + 1:nrow(.),
+           name   = str_replace(name, 'hru', 'eof'),
+           area   = hru_frac * area,
+           obj_id = id)
 
   hru_con_init <- hru_con_init %>%
-    mutate(area = (1 - hru_frac) * area,
-           out_tot = 1,
+    mutate(area      = (1 - hru_frac) * area,
+           out_tot   = 1,
            obj_typ_1 = 'hru',
            obj_id_1  = hru_con_eof$id,
            hyd_typ_1 = 'tot',

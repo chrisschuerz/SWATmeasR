@@ -2,8 +2,8 @@
 % Please edit documentation in R/prepare_management.R
 \name{prepare_management_scenario_inputs}
 \alias{prepare_management_scenario_inputs}
-\title{Prepare the management input data from SWATfarmR project as inputs
-for the definition of management related NSWRMs with
+\title{Prepare the management input data from SWATfarmR project as inputs for the
+definition of management related NSWRMs with
 \code{measr_project$load_nswrm_definition()}.}
 \usage{
 prepare_management_scenario_inputs(
@@ -18,8 +18,10 @@ prepare_management_scenario_inputs(
 )
 }
 \arguments{
-\item{project_path}{Path to the SWAT project folder on the hard drive
-(i.e. txtinout folder).}
+\item{project_path}{Path to the SWAT project folder on the hard drive (i.e.
+txtinout folder), or a folder with sub-folders for the status quo and the
+scenarios, where each folder contains the files hru-data.hru, landuse.lum,
+management.sch, and plant.ini for each case.}
 
 \item{status_quo}{Name of the SWATfarmR project which provides the status
 quo.}
@@ -34,12 +36,12 @@ op_types in status quo and a scenario.}
 \item{start_year}{Year to start management schedules if not entire scheduled
 periods from the farmR projects should be used. \code{start_year} must be
 defined together with \code{end_year} (default \code{NULL} all scheduled years are
-used).}
+used). Parameter only used in case of SWATfarmR projects.}
 
 \item{end_year}{Year to end management schedules if not entire scheduled
-periods from the farmR projects should be used. \code{end_year} must be
-defined together with \code{start_year} (default \code{NULL} all scheduled years are
-used).}
+periods from the farmR projects should be used. \code{end_year} must be defined
+together with \code{start_year} (default \code{NULL} all scheduled years are used).
+Parameter only used in case of SWATfarmR projects.}
 
 \item{write_path}{Optional path to write the prepared management inputs.}
 
@@ -51,12 +53,12 @@ and check the corrected dates of the scenario management tables.}
 Writes an '.rds' file into the \code{write_path} which must be used as
 the input file to define 'management' related NSWRMs in
 \code{measr_project$load_nswrm_definition()}. The file name has the following
-structure '<yyyymmdd_hhmm>_management_scenarios.rds'. Optionally also
-the management schedules for the scenarios and the status quo are written
-as '.csv' files into the folder '<yyyymmdd_hhmm>_management_scenarios'.
+structure '<yyyymmdd_hhmm>_management_scenarios.rds'. Optionally also the
+management schedules for the scenarios and the status quo are written as
+'.csv' files into the folder '<yyyymmdd_hhmm>_management_scenarios'.
 }
 \description{
-Prepare the management input data from SWATfarmR project as inputs
-for the definition of management related NSWRMs with
+Prepare the management input data from SWATfarmR project as inputs for the
+definition of management related NSWRMs with
 \code{measr_project$load_nswrm_definition()}.
 }

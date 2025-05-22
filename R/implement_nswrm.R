@@ -179,7 +179,9 @@ implement_nswrm <- function(nswrm_id, nswrm_defs, swat_inputs) {
                                      wet_wet_sel = wet_wet_sel,
                                      hyd_wet_sel = hyd_wet_sel)
 
-    eof_names <- paste0('eof',add_lead_zeros(hru_id, swat_inputs$hru_data.hru$id))
+    hru_names <- swat_inputs$hru_data.hru$name[swat_inputs$hru_data.hru$id %in% hru_id]
+
+    eof_names <- str_replace(hru_names, 'hru', 'eof')
     eof_ids <- swat_inputs$hru_data.hru$id[swat_inputs$hru_data.hru$name %in% eof_names]
 
     swat_inputs$implemented_nswrms <-

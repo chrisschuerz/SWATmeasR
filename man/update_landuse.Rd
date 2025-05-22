@@ -13,7 +13,10 @@ update_landuse(
   lum_cn2,
   lum_cpr,
   lum_ovn,
-  lum_tile
+  lum_tile,
+  lum_grww,
+  lum_vfs,
+  lum_bmp
 )
 }
 \arguments{
@@ -56,9 +59,27 @@ then the values of 'ov_mann' of each HRU will be preserved.  If
 
 \item{lum_tile}{The tile drainage parametrization which is assigned to the
 land use. A single character string must be provided. The passed value must
-be defined in the 'ovn_table.lum' intput file. If \verb{lum_tile = '::keep::},
+be defined in the 'tiledrain.str' intput file. If \verb{lum_tile = '::keep::},
 then the values of 'tile' of each HRU will be preserved.  If
 \verb{lum_tile = null'} then 'tile' will be set 'null' in the landuse.lum.}
+
+\item{lum_grww}{Grassed waterway parametrization which is assigned to the
+land use. A single character string must be provided. The passed value must
+be defined in the 'grassedww.str' intput file. If \verb{lum_tile = '::keep::},
+then the values of 'grww' of each HRU will be preserved.  If
+\verb{lum_grww = null'} then 'grww' will be set 'null' in the landuse.lum.}
+
+\item{lum_vfs}{Filter strip parametrization which is assigned to the
+land use. A single character string must be provided. The passed value must
+be defined in the 'filterstrip.str' intput file. If \verb{lum_vfs = '::keep::},
+then the values of 'vfs' of each HRU will be preserved.  If
+\verb{lum_vfs = null'} then 'vfs' will be set 'null' in the landuse.lum.}
+
+\item{lum_bmp}{User BMP parametrization which is assigned to the
+land use. A single character string must be provided. The passed value must
+be defined in the 'bmpuser.str' intput file. If \verb{lum_bmp = '::keep::},
+then the values of 'bmp' of each HRU will be preserved.  If
+\verb{lum_bmp = null'} then 'bmp' will be set 'null' in the landuse.lum.}
 }
 \value{
 The SWAT+ input tables list with the updated landuse.lum and
