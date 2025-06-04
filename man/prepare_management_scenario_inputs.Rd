@@ -14,7 +14,9 @@ prepare_management_scenario_inputs(
   start_year = NULL,
   end_year = NULL,
   write_path = project_path,
-  write_csv_mgts = FALSE
+  write_csv_mgts = FALSE,
+  update_luse_label = FALSE,
+  sync_dates = TRUE
 )
 }
 \arguments{
@@ -48,6 +50,19 @@ Parameter only used in case of SWATfarmR projects.}
 \item{write_csv_mgts}{Should the management tables with corrected dates be
 written as csv files (default is \code{FALSE}). This can be useful to compare
 and check the corrected dates of the scenario management tables.}
+
+\item{update_luse_label}{Should the land use labels of the input files be
+updated? This is useful if very long names (more than 25 characters) are
+used for landuse and management naming. Such long names would be
+misinterpreted by SWAT+ simulations. IF \code{TRUE} such labels would be
+shortened. If \code{FALSE} (default), this step in the preparation is skipped.}
+
+\item{sync_dates}{If the status quo management and the scenario managements
+are mostly similar in their sequences, with only a few measures changed but
+different dates for the 'same' operations it can benefit the the
+comparability if the dates of those operations are synced between the
+status quo and the scenarios (default \code{TRUE}). If this step should be
+skipped set \code{FALSE}.}
 }
 \value{
 Writes an '.rds' file into the \code{write_path} which must be used as

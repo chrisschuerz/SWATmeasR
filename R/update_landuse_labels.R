@@ -82,6 +82,10 @@ update_landuse_labels <- function(project_path) {
     mutate(lu_mgt = lu_mgt_upd) %>%
     select(-lu_mgt_upd)
 
+  auto_var <- str_detect(names(hru_data), 'V[:digit:]+')
+
+  hru_data <- hru_data[,!auto_var]
+
   fmt_hru_hru <- c('%8d', '%-16s', rep('%16s', 8))
   write_tbl(hru_data,
             paste0(project_path, '/hru-data.hru'),

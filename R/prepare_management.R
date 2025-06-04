@@ -13,10 +13,6 @@
 #'   model folder should be used (default `NULL` all farmR projects are used).
 #' @param synonyms Optional table to define synonymous op_data1 definitions for
 #'   op_types in status quo and a scenario.
-#' @param write_path Optional path to write the prepared management inputs.
-#' @param write_csv_mgts Should the management tables with corrected dates be
-#'   written as csv files (default is `FALSE`). This can be useful to compare
-#'   and check the corrected dates of the scenario management tables.
 #' @param start_year Year to start management schedules if not entire scheduled
 #'   periods from the farmR projects should be used. `start_year` must be
 #'   defined together with `end_year` (default `NULL` all scheduled years are
@@ -25,6 +21,21 @@
 #'   periods from the farmR projects should be used. `end_year` must be defined
 #'   together with `start_year` (default `NULL` all scheduled years are used).
 #'   Parameter only used in case of SWATfarmR projects.
+#' @param write_path Optional path to write the prepared management inputs.
+#' @param write_csv_mgts Should the management tables with corrected dates be
+#'   written as csv files (default is `FALSE`). This can be useful to compare
+#'   and check the corrected dates of the scenario management tables.
+#' @param update_luse_label Should the land use labels of the input files be
+#'   updated? This is useful if very long names (more than 25 characters) are
+#'   used for landuse and management naming. Such long names would be
+#'   misinterpreted by SWAT+ simulations. IF `TRUE` such labels would be
+#'   shortened. If `FALSE` (default), this step in the preparation is skipped.
+#' @param sync_dates If the status quo management and the scenario managements
+#'   are mostly similar in their sequences, with only a few measures changed but
+#'   different dates for the 'same' operations it can benefit the the
+#'   comparability if the dates of those operations are synced between the
+#'   status quo and the scenarios (default `TRUE`). If this step should be
+#'   skipped set `FALSE`.
 #'
 #' @returns Writes an '.rds' file into the `write_path` which must be used as
 #'   the input file to define 'management' related NSWRMs in
@@ -45,7 +56,9 @@ prepare_management_scenario_inputs <- function(project_path,
                                                synonyms = NULL,
                                                start_year = NULL, end_year = NULL,
                                                write_path = project_path,
-                                               write_csv_mgts = FALSE) {
+                                               write_csv_mgts = FALSE,
+                                               update_luse_label = FALSE,
+                                               sync_dates = TRUE) {
 
   # Load synonyms if provided as a path -------------------------------------
   if(is.character(synonyms)) {
@@ -170,7 +183,9 @@ prepare_management_scenario_inputs <- function(project_path,
       mgt_file_path <- paste0(project_path, '/', scen_i)
     }
 
-    update_landuse_labels(mgt_file_path)
+    if (update_luse_label) {
+      update_landuse_labels(mgt_file_path)
+    }
 
     hru_data_scen <- read_tbl(paste0(mgt_file_path, '/hru-data.hru'))
     luse_lum_scen <- read_tbl(paste0(mgt_file_path, '/landuse.lum'))
@@ -211,8 +226,9 @@ prepare_management_scenario_inputs <- function(project_path,
     mgt_file_path <- paste0(project_path, '/', status_quo)
   }
 
-
-  update_landuse_labels(mgt_file_path)
+  if (update_luse_label) {
+    update_landuse_labels(mgt_file_path)
+  }
 
   hru_data_squo <- read_tbl(paste0(mgt_file_path, '/hru-data.hru'))
   luse_lum_squo <- read_tbl(paste0(mgt_file_path, '/landuse.lum'))
@@ -265,49 +281,51 @@ prepare_management_scenario_inputs <- function(project_path,
   # still be considered as the same operation, synonyms can be defined with
   # the synonyms input table.
   #
+  if(sync_dates) {
 
-  names_squo <- factor(mgt_sch_squo$name)
-  schedule_squo <- split(mgt_sch_squo, names_squo)
-  hru_lum_squo  <- select(hru_data_squo, id, lu_mgt)
+    names_squo <- factor(mgt_sch_squo$name)
+    schedule_squo <- split(mgt_sch_squo, names_squo)
+    hru_lum_squo  <- select(hru_data_squo, id, lu_mgt)
 
-  for (scen_i in names(scen_files)) {
-    cat('Updating schedule dates for scenario', scen_i, ':\n' )
-    names_scen <- factor(scen_files[[scen_i]]$management.sch$name)
-    schedule_scen <- split(scen_files[[scen_i]]$management.sch, names_scen)
+    for (scen_i in names(scen_files)) {
+      cat('Updating schedule dates for scenario', scen_i, ':\n' )
+      names_scen <- factor(scen_files[[scen_i]]$management.sch$name)
+      schedule_scen <- split(scen_files[[scen_i]]$management.sch, names_scen)
 
-    hru_lum <- scen_files[[scen_i]]$hru_data.hru %>%
-      select(., id, lu_mgt) %>%
-      left_join(., hru_lum_squo, by = 'id', suffix = c("_scn", "_quo")) %>%
-      distinct(., lu_mgt_scn, .keep_all = T)
+      hru_lum <- scen_files[[scen_i]]$hru_data.hru %>%
+        select(., id, lu_mgt) %>%
+        left_join(., hru_lum_squo, by = 'id', suffix = c("_scn", "_quo")) %>%
+        distinct(., lu_mgt_scn, .keep_all = T)
 
-    t0 <- now()
-    cnt <- 1
-    for (i in 1:nrow(hru_lum)) {
-      lum_squo_i <- hru_lum$lu_mgt_quo[i]
-      lum_scen_i <- hru_lum$lu_mgt_scn[i]
-      mgt_squo_i <- luse_lum_squo$mgt[luse_lum_squo$name == lum_squo_i]
-      mgt_scen_i <- scen_files[[scen_i]]$landuse.lum$mgt[
-        scen_files[[scen_i]]$landuse.lum$name == lum_scen_i]
+      t0 <- now()
+      cnt <- 1
+      for (i in 1:nrow(hru_lum)) {
+        lum_squo_i <- hru_lum$lu_mgt_quo[i]
+        lum_scen_i <- hru_lum$lu_mgt_scn[i]
+        mgt_squo_i <- luse_lum_squo$mgt[luse_lum_squo$name == lum_squo_i]
+        mgt_scen_i <- scen_files[[scen_i]]$landuse.lum$mgt[
+          scen_files[[scen_i]]$landuse.lum$name == lum_scen_i]
 
-      if(all(mgt_squo_i != 'null') & all(mgt_scen_i != 'null')) {
-        sch_squo <- add_op_date(schedule_squo[[mgt_squo_i]], start_year)
-        sch_scen <- add_op_date(schedule_scen[[mgt_scen_i]], start_year)
+        if(all(mgt_squo_i != 'null') & all(mgt_scen_i != 'null')) {
+          sch_squo <- add_op_date(schedule_squo[[mgt_squo_i]], start_year)
+          sch_scen <- add_op_date(schedule_scen[[mgt_scen_i]], start_year)
 
-        if (!is.null(sch_scen)) {
-          if (nrow(sch_scen) > 0) {
-            date_i_upd <- update_dates(sch_squo, sch_scen, mgt_scen_i, synonyms, 21)
-            sch_scen$date <- date_i_upd
-            schedule_scen[[mgt_scen_i]] <- date_to_monday(sch_scen)
+          if (!is.null(sch_scen)) {
+            if (nrow(sch_scen) > 0) {
+              date_i_upd <- update_dates(sch_squo, sch_scen, mgt_scen_i, synonyms, 21)
+              sch_scen$date <- date_i_upd
+              schedule_scen[[mgt_scen_i]] <- date_to_monday(sch_scen)
+            }
           }
         }
+        display_progress_pct(cnt, nrow(hru_lum), t0, 'Updating schedule dates:')
+        cnt <- cnt + 1
       }
-      display_progress_pct(cnt, nrow(hru_lum), t0, 'Updating schedule dates:')
-      cnt <- cnt + 1
-    }
-    finish_progress(length(schedule_squo), t0, 'Updated', 'schedule')
-    scen_files[[scen_i]]$management.sch <- bind_rows(schedule_scen)
+      finish_progress(length(schedule_squo), t0, 'Updated', 'schedule')
+      scen_files[[scen_i]]$management.sch <- bind_rows(schedule_scen)
 
-    cat('\n')
+      cat('\n')
+    }
   }
 
   scen_files$status_quo <- list(hru_data.hru    = hru_data_squo,

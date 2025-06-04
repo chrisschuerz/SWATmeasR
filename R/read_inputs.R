@@ -191,6 +191,7 @@ read_tbl2 <- function(file_path, def_names, par_names, id_num = NULL) {
 
   pos_start <- def_pos + 1
   pos_end <- c(def_pos[2:length(def_pos)] - 1, length(file_line))
+  pos_end <- pos_end[!pos_end %in% c(NA, 0)]
   no_entry <- pos_start > pos_end
   pos_start[no_entry] <- length(file_line) + 1
   pos_end[no_entry] <- length(file_line) + 1
