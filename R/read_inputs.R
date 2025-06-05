@@ -134,6 +134,8 @@ read_tbl <- function(file_path, col_names = NULL, col_types = NULL, n_skip = 1) 
 
     names(tbl) <- col_names
     tbl <- tibble(tbl)
+    col_name_rmv <- str_detect(names(tbl), 'V[:digit:]+$')
+    tbl <- tbl[!col_name_rmv]
   } else {
     if (is.null(col_names)) {
       stop("File '", basename(file_path), "' does not exist and no 'col_names' ",
